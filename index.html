@@ -484,10 +484,10 @@
    ========================================================= */
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzH5u2hDStJ-ZraeXeZPtHRatos_86N8Grqga6wO8M5rpOD-JZq0k0Mwszh6aKtTYoj/exec';
 
-const STAGES = ['Belum Mulai','Survey','Desain','Produksi','Pemasangan','Selesai'];
+const STAGES = ['SUBMITTED','HELPDESK','WAITING PO','PO READY','SCHEDULED','IN PROGRESS','COMPLETED'];
 const STAGE_COLORS = {
-  'Belum Mulai':'#8a8f95','Survey':'#B8790E','Desain':'#B8790E','Produksi':'#B8790E',
-  'Pemasangan':'#B8790E','Selesai':'#2E7D4F'
+  'SUBMITTED':'#8a8f95','HELPDESK':'#B8790E','WAITING PO':'#B8790E','PO READY':'#B8790E',
+  'SCHEDULED':'#B8790E','IN PROGRESS':'#B8790E','COMPLETED':'#2E7D4F'
 };
 const KONDISI_COLORS = {
   'Baik':'#2E7D4F','Pudar / Kusam':'#B8790E','Rusak':'#E2600C','Belum Ada Branding':'#8a3ab8'
@@ -648,8 +648,8 @@ function render(){
   // stats (based on ALL data, not filtered — top-level truth)
   $('statTotal').textContent = DATA.length;
   $('statRebrand').textContent = DATA.filter(r=>r['Perlu Rebranding']==='Ya').length;
-  $('statProses').textContent = DATA.filter(r=>r['Status Proses'] && r['Status Proses']!=='Belum Mulai' && r['Status Proses']!=='Selesai').length;
-  $('statSelesai').textContent = DATA.filter(r=>r['Status Proses']==='Selesai').length;
+  $('statProses').textContent = DATA.filter(r=>r['Status Proses'] && r['Status Proses']!=='SUBMITTED' && r['Status Proses']!=='COMPLETED').length;
+  $('statSelesai').textContent = DATA.filter(r=>r['Status Proses']==='COMPLETED').length;
 
   renderRouteSummary();
 
@@ -685,7 +685,7 @@ function renderRouteSummary(){
   const track = $('routeTrack');
   track.innerHTML = STAGES.map((s,i)=>{
     const count = DATA.filter(r=>r['Status Proses']===s).length;
-    return `<div class="route-node ${s==='Selesai'?'done':''}">
+    return `<div class="route-node ${s==='COMPLETED'?'done':''}">
       <div class="route-line"></div>
       <div class="dot">${i+1}</div>
       <div class="cnt mono">${count}</div>
