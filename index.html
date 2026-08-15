@@ -695,11 +695,15 @@ function render(){
   }
 }
 
+// Ringkasan Tahapan Proses HANYA menampilkan tahap alur rebranding yang
+// sebenarnya (bukan "NOT REQUIRED" — itu status internal untuk armada yang
+// tidak perlu rebranding), dan hanya menghitung armada dengan Perlu Rebranding = "Ya".
+const ROUTE_SUMMARY_STAGES = STAGES.filter(s => s !== 'NOT REQUIRED');
 function renderRouteSummary(){
   const track = $('routeTrack');
-  track.innerHTML = STAGES.map((s,i)=>{
-    const count = DATA.filter(r=>r['Status Proses']===s).length;
-    return `<div class="route-node ${(s==='COMPLETED'||s==='NOT REQUIRED')?'done':''}">
+  track.innerHTML = ROUTE_SUMMARY_STAGES.map((s,i)=>{
+    const count = DATA.filter(r=>r['Perlu Rebranding']==='Ya' && r['Status Proses']===s).length;
+    return `<div class="route-node ${s==='COMPLETED'?'done':''}">
       <div class="route-line"></div>
       <div class="dot">${i+1}</div>
       <div class="cnt mono">${count}</div>
