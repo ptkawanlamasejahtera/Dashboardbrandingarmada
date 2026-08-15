@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Kontrol Branding Armada</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#14181C;
+    --surface:#F1F2ED;
+    --card:#FFFFFF;
+    --line:#DBDED6;
+    --line-strong:#C6CAC0;
+    --route:#1F3D5C;
+    --route-dark:#152B41;
+    --route-soft:#E4EAEF;
+    --alert:#E2600C;
+    --alert-soft:#FBE4D2;
+    --amber:#B8790E;
+    --amber-soft:#FCEFD2;
+    --green:#2E7D4F;
+    --green-soft:#DEEEE3;
+    --muted:#5B6168;
+    --radius:10px;
+    --shadow: 0 1px 2px rgba(20,24,28,0.06), 0 4px 14px rgba(20,24,28,0.06);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--surface);
+    color:var(--ink);
+    font-family:'Inter',system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+  }
+  h1,h2,h3,.disp{font-family:'Oswald',sans-serif; text-transform:uppercase; letter-spacing:0.02em;}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  a{color:inherit;}
+  button{font-family:inherit;cursor:pointer;}
+  ::selection{background:var(--amber-soft);}
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:0.01ms !important; transition-duration:0.01ms !important;}
+  }
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    background:linear-gradient(180deg,var(--route) 0%, var(--route-dark) 100%);
+    color:#fff;
+    padding:18px 22px 16px;
+    position:relative;
+    overflow:hidden;
+  }
+  .topbar::after{
+    content:"";
+    position:absolute; left:0; right:0; bottom:0; height:4px;
+    background:repeating-linear-gradient(90deg,#F4C244 0 22px, transparent 22px 40px);
+    opacity:0.9;
+  }
+  .topbar-inner{
+    max-width:1400px; margin:0 auto;
+    display:flex; align-items:flex-end; justify-content:space-between; gap:16px; flex-wrap:wrap;
+  }
+  .brand{display:flex; align-items:center; gap:12px;}
+  .brand-badge{
+    width:44px; height:44px; border-radius:8px;
+    background:var(--amber); color:#1c1200;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Oswald',sans-serif; font-weight:700; font-size:18px;
+    box-shadow: inset 0 0 0 2px rgba(0,0,0,0.15);
+    flex-shrink:0;
+  }
+  .brand h1{margin:0; font-size:22px; line-height:1.1; font-weight:600;}
+  .brand p{margin:2px 0 0; font-size:12.5px; color:#C9D6E1; text-transform:none; letter-spacing:0; font-family:'Inter',sans-serif;}
+  .stat-chips{display:flex; gap:8px; flex-wrap:wrap;}
+  .chip{
+    background:rgba(255,255,255,0.08);
+    border:1px solid rgba(255,255,255,0.18);
+    border-radius:8px; padding:8px 14px; min-width:88px;
+  }
+  .chip .n{font-family:'IBM Plex Mono',monospace; font-size:19px; font-weight:600; display:block; line-height:1;}
+  .chip .l{font-size:10.5px; text-transform:uppercase; letter-spacing:0.05em; color:#C9D6E1; display:block; margin-top:4px;}
+  .chip.alert .n{color:#FFB27A;}
+  .chip.amber .n{color:#F6D27A;}
+  .chip.green .n{color:#7FD3A0;}
+
+  /* ---------- Layout ---------- */
+  .wrap{max-width:1400px; margin:0 auto; padding:18px 22px 60px;}
+
+  .toolbar{
+    display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+    background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+    padding:12px 14px; margin-bottom:16px; box-shadow:var(--shadow);
+  }
+  .toolbar select, .toolbar input[type=text]{
+    font-family:'Inter',sans-serif; font-size:13.5px;
+    border:1px solid var(--line-strong); border-radius:7px;
+    padding:8px 10px; background:#fff; color:var(--ink); min-width:120px;
+  }
+  .toolbar input[type=text]{min-width:180px; flex:1;}
+  .toolbar .spacer{flex:1;}
+  .view-toggle{display:flex; border:1px solid var(--line-strong); border-radius:7px; overflow:hidden;}
+  .view-toggle button{
+    border:none; background:#fff; padding:8px 12px; font-size:13px; font-weight:600;
+    color:var(--muted);
+  }
+  .view-toggle button.active{background:var(--route); color:#fff;}
+  .btn{
+    border:none; border-radius:7px; padding:9px 16px; font-size:13.5px; font-weight:600;
+    display:inline-flex; align-items:center; gap:6px;
+  }
+  .btn-primary{background:var(--alert); color:#fff;}
+  .btn-primary:hover{background:#c45209;}
+  .btn-ghost{background:#fff; border:1px solid var(--line-strong); color:var(--ink);}
+  .btn-ghost:hover{background:var(--surface);}
+  .btn-sm{padding:6px 11px; font-size:12.5px;}
+
+  /* ---------- Route / progress summary ---------- */
+  .route-summary{
+    background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+    padding:16px 18px 14px; margin-bottom:16px; box-shadow:var(--shadow);
+  }
+  .route-summary h3{font-size:12.5px; color:var(--muted); margin:0 0 12px; letter-spacing:0.06em;}
+  .route-track{display:flex; align-items:center;}
+  .route-node{flex:1; text-align:center; position:relative;}
+  .route-node .dot{
+    width:30px; height:30px; border-radius:50%; background:var(--route-soft); color:var(--route);
+    display:flex; align-items:center; justify-content:center; margin:0 auto 6px;
+    font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:13px; border:2px solid var(--route);
+    position:relative; z-index:1;
+  }
+  .route-node .cnt{font-family:'Oswald',sans-serif; font-size:20px; font-weight:600; line-height:1;}
+  .route-node .lbl{font-size:11px; color:var(--muted); margin-top:2px; text-transform:uppercase; letter-spacing:0.03em;}
+  .route-line{
+    position:absolute; top:15px; left:-50%; right:50%; height:0;
+    border-top:2px dashed var(--line-strong); z-index:0;
+  }
+  .route-node:first-child .route-line{display:none;}
+  .route-node.done .dot{background:var(--green); border-color:var(--green); color:#fff;}
+
+  /* ---------- Board ---------- */
+  .board{display:flex; gap:12px; overflow-x:auto; padding-bottom:6px;}
+  .col{
+    flex:0 0 268px; background:#EAEBE5; border-radius:var(--radius);
+    border:1px solid var(--line); display:flex; flex-direction:column; max-height:calc(100vh - 260px); min-height:200px;
+  }
+  .col-head{
+    padding:10px 12px; border-bottom:1px solid var(--line);
+    display:flex; align-items:center; justify-content:space-between;
+    font-family:'Oswald',sans-serif; font-size:13px; letter-spacing:0.03em;
+  }
+  .col-head .badge{
+    background:var(--route); color:#fff; font-family:'IBM Plex Mono',monospace;
+    font-size:11.5px; padding:1px 7px; border-radius:20px;
+  }
+  .col-body{padding:10px; overflow-y:auto; display:flex; flex-direction:column; gap:9px;}
+  .col-body:empty::after{
+    content:"Belum ada armada di tahap ini"; font-size:12px; color:var(--muted); text-align:center; padding:16px 6px; display:block;
+  }
+
+  .plate-card{
+    background:var(--card); border:1px solid var(--line); border-radius:9px;
+    padding:10px 11px; box-shadow:var(--shadow); text-align:left; width:100%;
+    display:flex; flex-direction:column; gap:6px; transition:transform .12s ease, box-shadow .12s ease;
+  }
+  .plate-card:hover{transform:translateY(-1px); box-shadow:0 3px 10px rgba(20,24,28,0.12);}
+  .plate-top{display:flex; align-items:center; justify-content:space-between; gap:6px;}
+  .plate-badge{
+    font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:13.5px;
+    background:#F3F1E8; border:1.5px solid var(--ink); border-radius:4px; padding:2px 7px;
+    letter-spacing:0.03em;
+  }
+  .dot-kondisi{width:9px; height:9px; border-radius:50%; flex-shrink:0;}
+  .plate-meta{font-size:11.5px; color:var(--muted); display:flex; gap:6px; flex-wrap:wrap;}
+  .tag{background:var(--surface); border-radius:5px; padding:1.5px 6px;}
+  .plate-note{font-size:11.5px; color:var(--ink); opacity:0.8; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .plate-photos{display:flex; gap:5px;}
+  .plate-photos img{width:32px; height:32px; object-fit:cover; border-radius:5px; border:1px solid var(--line);}
+  .plate-foot{display:flex; justify-content:space-between; align-items:center; font-size:10.5px; color:var(--muted);}
+  .rebrand-flag{color:var(--alert); font-weight:700; font-size:10.5px; text-transform:uppercase;}
+
+  /* ---------- Table ---------- */
+  .table-wrap{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; box-shadow:var(--shadow);}
+  table{width:100%; border-collapse:collapse; font-size:13px;}
+  thead th{
+    text-align:left; font-family:'Oswald',sans-serif; font-weight:500; font-size:11.5px;
+    letter-spacing:0.04em; color:var(--muted); background:#F6F6F1;
+    padding:10px 12px; border-bottom:1px solid var(--line); white-space:nowrap;
+  }
+  tbody td{padding:10px 12px; border-bottom:1px solid var(--line); vertical-align:middle;}
+  tbody tr:hover{background:#FAFAF6; cursor:pointer;}
+  tbody tr:last-child td{border-bottom:none;}
+  .status-pill{
+    display:inline-flex; align-items:center; gap:5px; font-size:11.5px; font-weight:600;
+    padding:3px 9px; border-radius:20px; white-space:nowrap;
+  }
+
+  /* ---------- Empty / disconnected ---------- */
+  .empty-state{
+    background:var(--card); border:1px dashed var(--line-strong); border-radius:var(--radius);
+    padding:46px 24px; text-align:center; color:var(--muted);
+  }
+  .empty-state h2{font-size:18px; color:var(--ink); margin:0 0 8px;}
+  .empty-state p{font-size:13.5px; max-width:440px; margin:0 auto 16px;}
+  .banner{
+    background:var(--alert-soft); border:1px solid #EFB98A; color:#7A3A0A;
+    border-radius:8px; padding:10px 14px; margin-bottom:14px; font-size:13px;
+    display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
+  }
+  .banner strong{display:block; margin-bottom:2px;}
+  .retry-list{list-style:none; margin:6px 0 0; padding:0; font-size:12.5px;}
+  .retry-list li{display:flex; justify-content:space-between; gap:10px; padding:3px 0; border-top:1px solid #EFB98A;}
+
+  /* ---------- Modal / slide-over ---------- */
+  .overlay{
+    position:fixed; inset:0; background:rgba(20,24,28,0.5);
+    display:none; align-items:stretch; justify-content:flex-end; z-index:50;
+  }
+  .overlay.open{display:flex;}
+  .panel{
+    background:var(--surface); width:min(460px, 100%); height:100%; overflow-y:auto;
+    box-shadow:-6px 0 24px rgba(0,0,0,0.18); animation:slidein .18s ease;
+  }
+  @keyframes slidein{from{transform:translateX(24px); opacity:0;} to{transform:translateX(0); opacity:1;}}
+  .panel-head{
+    background:var(--route); color:#fff; padding:16px 18px; position:sticky; top:0; z-index:2;
+    display:flex; justify-content:space-between; align-items:center;
+  }
+  .panel-head h2{margin:0; font-size:17px;}
+  .panel-close{background:none; border:none; color:#fff; font-size:20px; line-height:1; opacity:0.85;}
+  .panel-body{padding:16px 18px 90px;}
+  .field{margin-bottom:14px;}
+  .field label{display:block; font-size:11.5px; font-weight:600; text-transform:uppercase; letter-spacing:0.04em; color:var(--muted); margin-bottom:5px;}
+  .field input[type=text], .field input[type=date], .field select, .field textarea{
+    width:100%; border:1px solid var(--line-strong); border-radius:7px; padding:9px 10px;
+    font-family:'Inter',sans-serif; font-size:14px; background:#fff; color:var(--ink);
+  }
+  .field textarea{resize:vertical; min-height:64px;}
+  .toggle-row{display:flex; gap:8px;}
+  .toggle-btn{
+    flex:1; padding:9px; border:1px solid var(--line-strong); border-radius:7px; background:#fff;
+    font-size:13px; font-weight:600; color:var(--muted);
+  }
+  .toggle-btn.on-ya{background:var(--alert-soft); border-color:var(--alert); color:var(--alert);}
+  .toggle-btn.on-tidak{background:var(--green-soft); border-color:var(--green); color:var(--green);}
+
+  .mini-route{display:flex; gap:4px; margin-bottom:6px;}
+  .mini-stage{
+    flex:1; text-align:center; padding:8px 2px; border-radius:6px; border:1px solid var(--line-strong);
+    background:#fff; font-size:10.5px; font-weight:600; color:var(--muted); line-height:1.2;
+  }
+  .mini-stage.active{background:var(--route); border-color:var(--route); color:#fff;}
+  .mini-stage.past{background:var(--route-soft); border-color:var(--route-soft); color:var(--route);}
+
+  .photo-row{display:flex; gap:10px;}
+  .photo-box{
+    flex:1; aspect-ratio:4/3; border:2px dashed var(--line-strong); border-radius:8px;
+    display:flex; align-items:center; justify-content:center; flex-direction:column; gap:4px;
+    background:#fff; color:var(--muted); font-size:11.5px; overflow:hidden; position:relative;
+  }
+  .photo-box img{width:100%; height:100%; object-fit:cover; position:absolute; inset:0;}
+  .photo-box .plus{font-size:22px; font-family:'Oswald',sans-serif;}
+
+  .riwayat-box{
+    background:#fff; border:1px solid var(--line); border-radius:8px; padding:10px 12px;
+    font-size:12px; max-height:150px; overflow-y:auto; white-space:pre-wrap; color:var(--muted);
+    font-family:'IBM Plex Mono',monospace; line-height:1.5;
+  }
+  .panel-footer{
+    position:sticky; bottom:0; background:var(--surface); border-top:1px solid var(--line);
+    padding:12px 18px; display:flex; gap:8px;
+  }
+  .panel-footer .btn{flex:1; justify-content:center;}
+
+  /* camera modal */
+  .cam-overlay{position:fixed; inset:0; background:#000; z-index:80; display:none; flex-direction:column;}
+  .cam-overlay.open{display:flex;}
+  .cam-overlay video{flex:1; width:100%; object-fit:cover; background:#000;}
+  .cam-controls{
+    display:flex; justify-content:center; align-items:center; gap:22px; padding:18px;
+    background:#000;
+  }
+  .cam-btn{width:56px; height:56px; border-radius:50%; border:3px solid #fff; background:transparent;}
+  .cam-shutter{width:70px; height:70px; background:#fff;}
+  .cam-x, .cam-flash{color:#fff; border:none; background:none; font-size:22px; width:44px; height:44px;}
+
+  .toast{
+    position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
+    background:var(--ink); color:#fff; padding:10px 18px; border-radius:8px; font-size:13.5px;
+    z-index:100; box-shadow:var(--shadow); opacity:0; transition:opacity .2s;
+    pointer-events:none;
+  }
+  .toast.show{opacity:1;}
+
+  @media (max-width:720px){
+    .topbar{padding:14px 14px 14px;}
+    .wrap{padding:14px 14px 60px;}
+    .stat-chips{width:100%;}
+    .chip{flex:1; min-width:0; text-align:center;}
+    .route-track{overflow-x:auto;}
+    .route-node{min-width:78px;}
+    .table-wrap{overflow-x:auto;}
+    table{min-width:760px;}
+    .panel{width:100%;}
+  }
+</style>
+</head>
+<body>
+
+  <div class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="brand-badge">RA</div>
+        <div>
+          <h1>Kontrol Branding Armada</h1>
+          <p>Pantau kondisi reklame &amp; progres rebranding tiap unit armada</p>
+        </div>
+      </div>
+      <div class="stat-chips">
+        <div class="chip"><span class="n mono" id="statTotal">0</span><span class="l">Total Armada</span></div>
+        <div class="chip alert"><span class="n mono" id="statRebrand">0</span><span class="l">Perlu Rebranding</span></div>
+        <div class="chip amber"><span class="n mono" id="statProses">0</span><span class="l">Dalam Proses</span></div>
+        <div class="chip green"><span class="n mono" id="statSelesai">0</span><span class="l">Selesai</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap">
+
+    <div id="bannerHost"></div>
+
+    <div class="route-summary">
+      <h3>RINGKASAN TAHAPAN PROSES</h3>
+      <div class="route-track" id="routeTrack"></div>
+    </div>
+
+    <div class="toolbar">
+      <input type="text" id="fSearch" placeholder="Cari nopol / jenis / PIC...">
+      <select id="fCabang"><option value="">Semua Cabang</option></select>
+      <select id="fKondisi">
+        <option value="">Semua Kondisi</option>
+        <option>Baik</option><option>Pudar / Kusam</option><option>Rusak</option><option>Belum Ada Branding</option>
+      </select>
+      <select id="fStatus"><option value="">Semua Status</option></select>
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);">
+        <input type="checkbox" id="fRebrandOnly"> Hanya perlu rebranding
+      </label>
+      <div class="spacer"></div>
+      <div class="view-toggle">
+        <button id="btnViewBoard" class="active">Board</button>
+        <button id="btnViewList">Tabel</button>
+      </div>
+      <button class="btn btn-primary" id="btnAdd">+ Tambah Armada</button>
+    </div>
+
+    <div id="boardView"></div>
+    <div id="listView" style="display:none;"></div>
+    <div id="emptyState" style="display:none;"></div>
+
+  </div>
+
+  <!-- Slide-over panel -->
+  <div class="overlay" id="overlay">
+    <div class="panel">
+      <div class="panel-head">
+        <h2 id="panelTitle">Tambah Armada</h2>
+        <button class="panel-close" id="btnClosePanel">&times;</button>
+      </div>
+      <div class="panel-body">
+
+        <div class="field">
+          <label>Nama Anda (PIC yang update)</label>
+          <input type="text" id="fldUpdater" placeholder="Nama Anda">
+        </div>
+
+        <div class="field">
+          <label>Nomor Polisi</label>
+          <input type="text" id="fldNopol" placeholder="B 1234 XYZ" style="text-transform:uppercase;">
+        </div>
+
+        <div class="field" style="display:flex; gap:10px;">
+          <div style="flex:1;">
+            <label>Jenis Armada</label>
+            <input type="text" id="fldJenis" list="listJenis" placeholder="Truck Box, Pickup, ...">
+            <datalist id="listJenis"></datalist>
+          </div>
+          <div style="flex:1;">
+            <label>Cabang</label>
+            <input type="text" id="fldCabang" list="listCabang" placeholder="Cabang / Kota">
+            <datalist id="listCabang"></datalist>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Kondisi Reklame Saat Ini</label>
+          <select id="fldKondisi">
+            <option>Baik</option><option>Pudar / Kusam</option><option>Rusak</option><option>Belum Ada Branding</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Perlu Rebranding?</label>
+          <div class="toggle-row">
+            <button type="button" class="toggle-btn" id="btnRebrandYa">Ya</button>
+            <button type="button" class="toggle-btn" id="btnRebrandTidak">Tidak</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Status Proses Rebranding</label>
+          <div class="mini-route" id="miniRoute"></div>
+        </div>
+
+        <div class="field" style="display:flex; gap:10px;">
+          <div style="flex:1;">
+            <label>PIC Lapangan</label>
+            <input type="text" id="fldPic" placeholder="Nama PIC">
+          </div>
+          <div style="flex:1;">
+            <label>Target Selesai</label>
+            <input type="date" id="fldTarget">
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Foto Kondisi Saat Ini (Before)</label>
+          <div class="photo-box" id="boxBefore" data-key="before">
+            <span class="plus">+</span><span>Ambil / unggah foto</span>
+          </div>
+          <input type="file" accept="image/*" id="fileBefore" style="display:none;">
+        </div>
+
+        <div class="field">
+          <label>Foto Setelah Rebranding (After)</label>
+          <div class="photo-box" id="boxAfter" data-key="after">
+            <span class="plus">+</span><span>Ambil / unggah foto</span>
+          </div>
+          <input type="file" accept="image/*" id="fileAfter" style="display:none;">
+        </div>
+
+        <div class="field">
+          <label>Catatan Update</label>
+          <textarea id="fldCatatan" placeholder="Catatan singkat untuk update ini..."></textarea>
+        </div>
+
+        <div class="field" id="riwayatField" style="display:none;">
+          <label>Riwayat</label>
+          <div class="riwayat-box" id="riwayatBox"></div>
+        </div>
+
+      </div>
+      <div class="panel-footer">
+        <button class="btn btn-ghost" id="btnCancelPanel">Batal</button>
+        <button class="btn btn-primary" id="btnSavePanel">Simpan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Camera overlay -->
+  <div class="cam-overlay" id="camOverlay">
+    <div style="display:flex; justify-content:space-between; padding:10px 14px;">
+      <button class="cam-x" id="camClose">&times;</button>
+      <button class="cam-flash" id="camFlash">&#9889;</button>
+    </div>
+    <video id="camVideo" autoplay playsinline muted></video>
+    <div class="cam-controls">
+      <button class="cam-btn cam-shutter" id="camShutter"></button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+/* =========================================================
+   CONFIG — ganti dengan URL Web App Apps Script kamu setelah deploy
+   ========================================================= */
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzH5u2hDStJ-ZraeXeZPtHRatos_86N8Grqga6wO8M5rpOD-JZq0k0Mwszh6aKtTYoj/exec';
+
+const STAGES = ['Belum Mulai','Survey','Desain','Produksi','Pemasangan','Selesai'];
+const STAGE_COLORS = {
+  'Belum Mulai':'#8a8f95','Survey':'#B8790E','Desain':'#B8790E','Produksi':'#B8790E',
+  'Pemasangan':'#B8790E','Selesai':'#2E7D4F'
+};
+const KONDISI_COLORS = {
+  'Baik':'#2E7D4F','Pudar / Kusam':'#B8790E','Rusak':'#E2600C','Belum Ada Branding':'#8a3ab8'
+};
+
+let DATA = [];              // all rows from sheet
+let editingId = null;       // null = create mode
+let currentStatus = STAGES[0];
+let currentRebrand = 'Ya';
+let photos = { before:null, after:null };  // compressed base64
+let existingPhotoUrls = { before:'', after:'' };
+let camTargetKey = null;
+let camStream = null;
+let camReady = false;
+let torchOn = false;
+let retryQueue = []; // failed saves {id, label, payload}
+let currentView = 'board';
+
+/* ---------- utils ---------- */
+function $(id){ return document.getElementById(id); }
+function toast(msg){
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2600);
+}
+function fmtRelative(dateStr){
+  if(!dateStr) return '-';
+  const d = new Date(dateStr);
+  if(isNaN(d)) return dateStr;
+  const diff = (Date.now() - d.getTime())/1000;
+  if(diff < 60) return 'baru saja';
+  if(diff < 3600) return Math.floor(diff/60)+' menit lalu';
+  if(diff < 86400) return Math.floor(diff/3600)+' jam lalu';
+  return Math.floor(diff/86400)+' hari lalu';
+}
+function genId(){ return 'AR-' + Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+function needsRebranding(kondisi){ return kondisi && kondisi !== 'Baik'; }
+
+/* ---------- persist "your name" locally (best-effort) ---------- */
+try{
+  const savedName = localStorage.getItem('branding_updater_name');
+  if(savedName) $('fldUpdater').value = savedName;
+}catch(e){/* ignore, e.g. storage blocked */}
+
+/* =========================================================
+   LOAD DATA (JSONP — works cross-origin from GitHub Pages)
+   ========================================================= */
+function loadData(){
+  if(!SCRIPT_URL || SCRIPT_URL.indexOf('PASTE_') === 0){
+    showBanner('Dashboard belum terhubung ke Google Sheet. Tempel URL Apps Script pada baris SCRIPT_URL di file index.html, lalu unggah ulang.', true);
+    render();
+    return;
+  }
+  const cbName = 'armadaCb_' + Date.now();
+  let settled = false;
+  function cleanup(script){ if(script && script.parentNode) script.parentNode.removeChild(script); delete window[cbName]; }
+  window[cbName] = function(data){
+    settled = true;
+    if(Array.isArray(data)){ DATA = data; render(); }
+    else { showBanner('Gagal memuat data dari Sheet: ' + (data && data.error ? data.error : 'format tidak dikenal'), true); }
+    cleanup(script);
+  };
+  const script = document.createElement('script');
+  script.src = SCRIPT_URL + '?action=list&callback=' + cbName;
+  script.onerror = () => { if(!settled){ showBanner('Gagal memuat data. Cek koneksi atau URL Apps Script.', true); cleanup(script); } };
+  document.head.appendChild(script);
+  setTimeout(() => { if(!settled){ showBanner('Waktu muat data habis. Coba muat ulang halaman.', true); cleanup(script); } }, 9000);
+}
+
+let bannerDismissed = false;
+function showBanner(msg, sticky){
+  const host = $('bannerHost');
+  host.innerHTML = '';
+  const b = document.createElement('div');
+  b.className = 'banner';
+  b.innerHTML = '<div><strong>Perhatian</strong><span>'+msg+'</span></div>';
+  if(!sticky){
+    const btn = document.createElement('button');
+    btn.className='btn btn-ghost btn-sm'; btn.textContent='Tutup';
+    btn.onclick = ()=> host.innerHTML='';
+    b.appendChild(btn);
+  }
+  host.appendChild(b);
+}
+function renderRetryBanner(){
+  const host = $('bannerHost');
+  if(retryQueue.length === 0) return;
+  const b = document.createElement('div');
+  b.className = 'banner';
+  let items = retryQueue.map((q,i)=>
+    '<li><span>'+q.label+'</span><button class="btn btn-ghost btn-sm" onclick="resendItem('+i+')">Kirim Ulang</button></li>'
+  ).join('');
+  b.innerHTML = '<div style="width:100%;"><strong>Beberapa perubahan belum tersimpan ke Sheet</strong>'+
+    '<span>Koneksi gagal saat menyimpan. Data ini hanya ada di halaman ini — kirim ulang sebelum menutup tab.</span>'+
+    '<ul class="retry-list">'+items+'</ul></div>';
+  host.appendChild(b);
+}
+function resendItem(i){
+  const item = retryQueue[i];
+  if(!item) return;
+  postToSheet(item.payload).then(()=>{
+    retryQueue.splice(i,1);
+    toast('Berhasil dikirim ulang');
+    $('bannerHost').innerHTML=''; renderRetryBanner();
+  }).catch(()=>{ toast('Masih gagal, coba lagi nanti'); });
+}
+window.resendItem = resendItem;
+
+function postToSheet(payload){
+  return fetch(SCRIPT_URL, {
+    method:'POST', mode:'no-cors',
+    body: JSON.stringify(payload)
+  });
+}
+
+/* =========================================================
+   DERIVED / FILTER
+   ========================================================= */
+function filteredData(){
+  const search = $('fSearch').value.trim().toLowerCase();
+  const cabang = $('fCabang').value;
+  const kondisi = $('fKondisi').value;
+  const status = $('fStatus').value;
+  const rebrandOnly = $('fRebrandOnly').checked;
+  return DATA.filter(r=>{
+    if(search){
+      const hay = ((r.Nopol||'')+' '+(r['Jenis Armada']||'')+' '+(r['PIC Lapangan']||'')).toLowerCase();
+      if(hay.indexOf(search) === -1) return false;
+    }
+    if(cabang && r.Cabang !== cabang) return false;
+    if(kondisi && r['Kondisi Reklame'] !== kondisi) return false;
+    if(status && r['Status Proses'] !== status) return false;
+    if(rebrandOnly && r['Perlu Rebranding'] !== 'Ya') return false;
+    return true;
+  });
+}
+
+function populateFilterOptions(){
+  const cabangSet = new Set(DATA.map(r=>r.Cabang).filter(Boolean));
+  const cabangSel = $('fCabang'); const cur = cabangSel.value;
+  cabangSel.innerHTML = '<option value="">Semua Cabang</option>' +
+    [...cabangSet].sort().map(c=>`<option ${c===cur?'selected':''}>${c}</option>`).join('');
+  const statusSel = $('fStatus'); const curS = statusSel.value;
+  statusSel.innerHTML = '<option value="">Semua Status</option>' +
+    STAGES.map(s=>`<option ${s===curS?'selected':''}>${s}</option>`).join('');
+
+  $('listCabang').innerHTML = [...cabangSet].sort().map(c=>`<option value="${c}">`).join('');
+  const jenisSet = new Set(DATA.map(r=>r['Jenis Armada']).filter(Boolean));
+  $('listJenis').innerHTML = [...jenisSet].sort().map(c=>`<option value="${c}">`).join('');
+}
+
+/* =========================================================
+   RENDER
+   ========================================================= */
+function render(){
+  populateFilterOptions();
+  const rows = filteredData();
+
+  // stats (based on ALL data, not filtered — top-level truth)
+  $('statTotal').textContent = DATA.length;
+  $('statRebrand').textContent = DATA.filter(r=>r['Perlu Rebranding']==='Ya').length;
+  $('statProses').textContent = DATA.filter(r=>r['Status Proses'] && r['Status Proses']!=='Belum Mulai' && r['Status Proses']!=='Selesai').length;
+  $('statSelesai').textContent = DATA.filter(r=>r['Status Proses']==='Selesai').length;
+
+  renderRouteSummary();
+
+  $('bannerHost').innerHTML = '';
+  renderRetryBanner();
+
+  if(DATA.length === 0){
+    $('emptyState').style.display = 'block';
+    $('boardView').style.display = 'none';
+    $('listView').style.display = 'none';
+    $('emptyState').innerHTML = `
+      <div class="empty-state">
+        <h2>Belum ada armada terdaftar</h2>
+        <p>Tambahkan data armada pertama untuk mulai memantau kondisi reklame dan progres rebranding di semua cabang.</p>
+        <button class="btn btn-primary" onclick="openPanel(null)">+ Tambah Armada Pertama</button>
+      </div>`;
+    return;
+  }
+  $('emptyState').style.display = 'none';
+
+  if(currentView === 'board'){
+    $('boardView').style.display = 'block';
+    $('listView').style.display = 'none';
+    renderBoard(rows);
+  } else {
+    $('boardView').style.display = 'none';
+    $('listView').style.display = 'block';
+    renderList(rows);
+  }
+}
+
+function renderRouteSummary(){
+  const track = $('routeTrack');
+  track.innerHTML = STAGES.map((s,i)=>{
+    const count = DATA.filter(r=>r['Status Proses']===s).length;
+    return `<div class="route-node ${s==='Selesai'?'done':''}">
+      <div class="route-line"></div>
+      <div class="dot">${i+1}</div>
+      <div class="cnt mono">${count}</div>
+      <div class="lbl">${s}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderBoard(rows){
+  const host = $('boardView');
+  host.innerHTML = '<div class="board" id="boardCols"></div>';
+  const cols = $('boardCols');
+  cols.innerHTML = STAGES.map(stage=>{
+    const items = rows.filter(r=>r['Status Proses']===stage);
+    return `<div class="col">
+      <div class="col-head"><span>${stage}</span><span class="badge">${items.length}</span></div>
+      <div class="col-body">${items.map(cardHtml).join('')}</div>
+    </div>`;
+  }).join('');
+  cols.querySelectorAll('[data-open-id]').forEach(el=>{
+    el.addEventListener('click', ()=> openPanel(el.getAttribute('data-open-id')));
+  });
+}
+
+function cardHtml(r){
+  const kColor = KONDISI_COLORS[r['Kondisi Reklame']] || '#8a8f95';
+  const photosHtml = [r['Foto Before'], r['Foto After']].filter(Boolean)
+    .map(u=>`<img src="${driveThumb(u)}" loading="lazy">`).join('');
+  return `<button class="plate-card" data-open-id="${r.ID}" style="text-align:left;">
+    <div class="plate-top">
+      <span class="plate-badge">${escapeHtml(r.Nopol||'-')}</span>
+      <span class="dot-kondisi" style="background:${kColor}" title="${r['Kondisi Reklame']||''}"></span>
+    </div>
+    <div class="plate-meta">
+      <span class="tag">${escapeHtml(r['Jenis Armada']||'-')}</span>
+      <span class="tag">${escapeHtml(r.Cabang||'-')}</span>
+    </div>
+    ${photosHtml ? `<div class="plate-photos">${photosHtml}</div>` : ''}
+    ${r.Catatan ? `<div class="plate-note">${escapeHtml(r.Catatan)}</div>` : ''}
+    <div class="plate-foot">
+      <span>${r['Perlu Rebranding']==='Ya' ? '<span class="rebrand-flag">Perlu Rebranding</span>' : 'PIC: '+escapeHtml(r['PIC Lapangan']||'-')}</span>
+      <span>${fmtRelative(r['Tanggal Update'])}</span>
+    </div>
+  </button>`;
+}
+
+function renderList(rows){
+  const host = $('listView');
+  host.innerHTML = `<div class="table-wrap"><table>
+    <thead><tr>
+      <th>Nopol</th><th>Jenis</th><th>Cabang</th><th>Kondisi</th><th>Rebranding</th>
+      <th>Status</th><th>PIC</th><th>Target</th><th>Update Terakhir</th>
+    </tr></thead>
+    <tbody id="listBody"></tbody>
+  </table></div>`;
+  const body = $('listBody');
+  body.innerHTML = rows.map(r=>{
+    const sColor = STAGE_COLORS[r['Status Proses']] || '#8a8f95';
+    return `<tr data-open-id="${r.ID}">
+      <td class="mono">${escapeHtml(r.Nopol||'-')}</td>
+      <td>${escapeHtml(r['Jenis Armada']||'-')}</td>
+      <td>${escapeHtml(r.Cabang||'-')}</td>
+      <td>${escapeHtml(r['Kondisi Reklame']||'-')}</td>
+      <td>${r['Perlu Rebranding']==='Ya' ? '<span class="rebrand-flag">Ya</span>' : 'Tidak'}</td>
+      <td><span class="status-pill" style="background:${sColor}22;color:${sColor}">${escapeHtml(r['Status Proses']||'-')}</span></td>
+      <td>${escapeHtml(r['PIC Lapangan']||'-')}</td>
+      <td>${escapeHtml(r['Target Selesai']||'-')}</td>
+      <td>${fmtRelative(r['Tanggal Update'])}</td>
+    </tr>`;
+  }).join('');
+  body.querySelectorAll('tr').forEach(el=>{
+    el.addEventListener('click', ()=> openPanel(el.getAttribute('data-open-id')));
+  });
+}
+
+function driveThumb(url){
+  // Convert a Google Drive file "view" URL into a thumbnail URL when possible
+  const m = url && url.match(/\/d\/([^/]+)/);
+  if(m) return 'https://drive.google.com/thumbnail?id=' + m[1];
+  return url;
+}
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* =========================================================
+   PANEL (add / edit)
+   ========================================================= */
+function openPanel(id){
+  editingId = id;
+  photos = { before:null, after:null };
+  existingPhotoUrls = { before:'', after:'' };
+  const record = id ? DATA.find(r=>r.ID===id) : null;
+
+  $('panelTitle').textContent = record ? 'Detail Armada' : 'Tambah Armada';
+  $('fldNopol').value = record ? record.Nopol||'' : '';
+  $('fldJenis').value = record ? record['Jenis Armada']||'' : '';
+  $('fldCabang').value = record ? record.Cabang||'' : '';
+  $('fldKondisi').value = record ? record['Kondisi Reklame']||'Baik' : 'Baik';
+  $('fldPic').value = record ? record['PIC Lapangan']||'' : '';
+  $('fldTarget').value = record ? record['Target Selesai']||'' : '';
+  $('fldCatatan').value = '';
+
+  currentStatus = record ? (record['Status Proses'] || STAGES[0]) : STAGES[0];
+  currentRebrand = record ? (record['Perlu Rebranding'] || (needsRebranding($('fldKondisi').value)?'Ya':'Tidak')) : 'Tidak';
+  renderMiniRoute();
+  renderRebrandToggle();
+
+  existingPhotoUrls.before = record ? record['Foto Before']||'' : '';
+  existingPhotoUrls.after = record ? record['Foto After']||'' : '';
+  renderPhotoBox('before'); renderPhotoBox('after');
+
+  if(record && record.Riwayat){
+    $('riwayatField').style.display = 'block';
+    $('riwayatBox').textContent = record.Riwayat;
+  } else {
+    $('riwayatField').style.display = 'none';
+  }
+
+  $('overlay').classList.add('open');
+}
+function closePanel(){ $('overlay').classList.remove('open'); }
+
+$('fldKondisi').addEventListener('change', ()=>{
+  // suggest a default, but don't override an explicit user choice silently for existing edits
+  if(!editingId){
+    currentRebrand = needsRebranding($('fldKondisi').value) ? 'Ya' : 'Tidak';
+    renderRebrandToggle();
+  }
+});
+
+function renderRebrandToggle(){
+  $('btnRebrandYa').className = 'toggle-btn' + (currentRebrand==='Ya' ? ' on-ya':'');
+  $('btnRebrandTidak').className = 'toggle-btn' + (currentRebrand==='Tidak' ? ' on-tidak':'');
+}
+$('btnRebrandYa').onclick = ()=>{ currentRebrand='Ya'; renderRebrandToggle(); };
+$('btnRebrandTidak').onclick = ()=>{ currentRebrand='Tidak'; renderRebrandToggle(); };
+
+function renderMiniRoute(){
+  const curIdx = STAGES.indexOf(currentStatus);
+  $('miniRoute').innerHTML = STAGES.map((s,i)=>{
+    let cls = '';
+    if(i === curIdx) cls = 'active'; else if(i < curIdx) cls = 'past';
+    return `<button type="button" class="mini-stage ${cls}" data-stage="${s}">${s}</button>`;
+  }).join('');
+  $('miniRoute').querySelectorAll('.mini-stage').forEach(btn=>{
+    btn.onclick = ()=>{ currentStatus = btn.getAttribute('data-stage'); renderMiniRoute(); };
+  });
+}
+
+function renderPhotoBox(key){
+  const box = $(key === 'before' ? 'boxBefore' : 'boxAfter');
+  const b64 = photos[key];
+  const url = existingPhotoUrls[key];
+  if(b64){
+    box.innerHTML = `<img src="${b64}">`;
+  } else if(url){
+    box.innerHTML = `<img src="${driveThumb(url)}">`;
+  } else {
+    box.innerHTML = `<span class="plus">+</span><span>Ambil / unggah foto</span>`;
+  }
+}
+$('boxBefore').addEventListener('click', ()=> startCamera('before'));
+$('boxAfter').addEventListener('click', ()=> startCamera('after'));
+
+$('fileBefore').addEventListener('change', e=> handleFileInput(e,'before'));
+$('fileAfter').addEventListener('change', e=> handleFileInput(e,'after'));
+
+function handleFileInput(e, key){
+  const file = e.target.files[0];
+  if(!file) return;
+  compressImage(file, 900, 0.55, dataUrl=>{
+    photos[key] = dataUrl;
+    renderPhotoBox(key);
+  });
+  e.target.value = '';
+}
+
+function compressImage(file, maxWidth, quality, callback){
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      let w = img.width, h = img.height;
+      if(w > maxWidth){ h = h * (maxWidth / w); w = maxWidth; }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      callback(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+/* ---------- in-page camera ---------- */
+function startCamera(key){
+  camTargetKey = key;
+  const secure = window.isSecureContext && navigator.mediaDevices && navigator.mediaDevices.getUserMedia;
+  if(!secure){
+    (key==='before' ? $('fileBefore') : $('fileAfter')).click();
+    return;
+  }
+  $('camOverlay').classList.add('open');
+  camReady = false;
+  const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 6000));
+  Promise.race([
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio:false }),
+    timeout
+  ]).then(stream=>{
+    camStream = stream;
+    const video = $('camVideo');
+    video.srcObject = stream;
+    video.onloadeddata = ()=>{ camReady = true; };
+    video.play().catch(()=>{});
+  }).catch(()=>{
+    closeCamera();
+    (key==='before' ? $('fileBefore') : $('fileAfter')).click();
+  });
+}
+function closeCamera(){
+  $('camOverlay').classList.remove('open');
+  if(camStream){ camStream.getTracks().forEach(t=>t.stop()); camStream = null; }
+  const video = $('camVideo'); video.srcObject = null;
+  camReady = false; torchOn = false;
+}
+$('camClose').addEventListener('click', closeCamera);
+$('camShutter').addEventListener('click', ()=>{
+  const video = $('camVideo');
+  if(!camReady || video.readyState < 2){ toast('Kamera masih memuat, coba tunggu sebentar…'); return; }
+  try{
+    const canvas = document.createElement('canvas');
+    let w = video.videoWidth, h = video.videoHeight;
+    const maxW = 900;
+    if(w > maxW){ h = h*(maxW/w); w = maxW; }
+    canvas.width = w; canvas.height = h;
+    canvas.getContext('2d').drawImage(video, 0, 0, w, h);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.55);
+    photos[camTargetKey] = dataUrl;
+    renderPhotoBox(camTargetKey);
+  }catch(err){ toast('Gagal mengambil foto, coba lagi.'); }
+  finally{ closeCamera(); }
+});
+$('camFlash').addEventListener('click', ()=>{
+  if(!camStream) return;
+  const track = camStream.getVideoTracks()[0];
+  const caps = track.getCapabilities ? track.getCapabilities() : {};
+  if(!caps.torch){ toast('Flash tidak didukung di HP/browser ini'); return; }
+  track.applyConstraints({ advanced:[{ torch: !torchOn }] }).then(()=>{ torchOn = !torchOn; });
+});
+
+/* ---------- save ---------- */
+$('btnSavePanel').addEventListener('click', ()=>{
+  const updater = $('fldUpdater').value.trim();
+  const nopol = $('fldNopol').value.trim().toUpperCase();
+  if(!updater){ toast('Isi nama Anda dulu ya'); $('fldUpdater').focus(); return; }
+  if(!nopol){ toast('Nomor polisi wajib diisi'); $('fldNopol').focus(); return; }
+
+  try{ localStorage.setItem('branding_updater_name', updater); }catch(e){}
+
+  const id = editingId || genId();
+  const isNew = !editingId;
+  const noteText = $('fldCatatan').value.trim();
+
+  const payload = {
+    action: 'save',
+    id: id,
+    nopol: nopol,
+    jenis: $('fldJenis').value.trim(),
+    cabang: $('fldCabang').value.trim(),
+    kondisi: $('fldKondisi').value,
+    perlu_rebranding: currentRebrand,
+    status: currentStatus,
+    pic: $('fldPic').value.trim(),
+    target_selesai: $('fldTarget').value,
+    catatan: noteText,
+    foto_before: photos.before || '',
+    foto_after: photos.after || '',
+    updated_by: updater,
+    riwayat_note: isNew ? 'Armada ditambahkan' : ('Update: ' + (noteText || ('status → ' + currentStatus)))
+  };
+
+  // optimistic local update
+  const nowIso = new Date().toISOString();
+  let rec = DATA.find(r=>r.ID===id);
+  if(!rec){
+    rec = { ID:id, 'Riwayat':'' };
+    DATA.push(rec);
+  }
+  rec.Nopol = payload.nopol;
+  rec['Jenis Armada'] = payload.jenis;
+  rec.Cabang = payload.cabang;
+  rec['Kondisi Reklame'] = payload.kondisi;
+  rec['Perlu Rebranding'] = payload.perlu_rebranding;
+  rec['Status Proses'] = payload.status;
+  rec['PIC Lapangan'] = payload.pic;
+  rec['Target Selesai'] = payload.target_selesai;
+  if(payload.foto_before) rec['Foto Before'] = payload.foto_before; // local preview only until sheet round-trip
+  if(payload.foto_after) rec['Foto After'] = payload.foto_after;
+  if(noteText) rec.Catatan = noteText;
+  rec['Tanggal Update'] = nowIso;
+  rec['Diupdate Oleh'] = updater;
+  rec.Riwayat = (rec.Riwayat ? rec.Riwayat + '\n' : '') + '[' + nowIso + '] ' + updater + ': ' + payload.riwayat_note;
+
+  closePanel();
+  toast(isNew ? 'Armada ditambahkan' : 'Perubahan disimpan');
+  render();
+
+  if(!SCRIPT_URL || SCRIPT_URL.indexOf('PASTE_') === 0){
+    return; // demo/disconnected mode — keep local only
+  }
+  postToSheet(payload).catch(()=>{
+    retryQueue.push({ id, label: (payload.nopol||id) + ' — ' + payload.riwayat_note, payload });
+    render();
+  });
+});
+
+$('btnCancelPanel').addEventListener('click', closePanel);
+$('btnClosePanel').addEventListener('click', closePanel);
+$('overlay').addEventListener('click', e=>{ if(e.target.id==='overlay') closePanel(); });
+
+/* ---------- toolbar wiring ---------- */
+$('btnAdd').addEventListener('click', ()=> openPanel(null));
+$('fSearch').addEventListener('input', render);
+$('fCabang').addEventListener('change', render);
+$('fKondisi').addEventListener('change', render);
+$('fStatus').addEventListener('change', render);
+$('fRebrandOnly').addEventListener('change', render);
+$('btnViewBoard').addEventListener('click', ()=>{ currentView='board'; $('btnViewBoard').classList.add('active'); $('btnViewList').classList.remove('active'); render(); });
+$('btnViewList').addEventListener('click', ()=>{ currentView='list'; $('btnViewList').classList.add('active'); $('btnViewBoard').classList.remove('active'); render(); });
+
+/* ---------- boot ---------- */
+loadData();
+</script>
+</body>
+</html>
