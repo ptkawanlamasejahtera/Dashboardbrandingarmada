@@ -260,6 +260,8 @@
   }
   .mini-stage.active{background:var(--route); border-color:var(--route); color:#fff;}
   .mini-stage.past{background:var(--route-soft); border-color:var(--route-soft); color:var(--route);}
+  .mini-stage.disabled, .mini-stage:disabled{opacity:0.4; cursor:not-allowed; background:#F1F2ED;}
+  .mini-stage.disabled:hover, .mini-stage:disabled:hover{background:#F1F2ED;}
 
   .photo-row{display:flex; gap:10px;}
   .photo-box{
@@ -834,6 +836,7 @@ function openPanel(id){
 
   if(record){
     fillFormFromRecord(record);
+    reconcileStatusWithRebranding();
   } else {
     $('fldKode').value = '';
     $('fldNopol').value = '';
@@ -842,10 +845,9 @@ function openPanel(id){
     $('fldKondisi').value = 'Baik';
     $('fldPic').value = '';
     $('fldTarget').value = '';
-    currentStatus = DEFAULT_STAGE;
     currentRebrand = 'Tidak';
-    renderMiniRoute();
     renderRebrandToggle();
+    reconcileStatusWithRebranding();
     renderPhotoBox('before'); renderPhotoBox('after');
     $('riwayatField').style.display = 'none';
   }
@@ -904,6 +906,7 @@ function checkIdentityMatch(){
   if(openedAsNew){
     // Nopol/Kode cocok dengan data yang sudah ada -> sambungkan otomatis
     fillFormFromRecord(match);
+    reconcileStatusWithRebranding();
     editingId = match.ID;
     autoLinked = true;
     duplicateBlocked = false;
@@ -924,20 +927,17 @@ function scheduleIdentityCheck(){
 $('fldNopol').addEventListener('input', scheduleIdentityCheck);
 $('fldKode').addEventListener('input', scheduleIdentityCheck);
 
-// Kalau Kondisi Reklame = "Baik" DAN Perlu Rebranding = "Tidak", armada ini
-// tidak masuk alur proses rebranding sama sekali -> status otomatis "NOT REQUIRED".
-// Kalau kondisinya berubah lagi (jadi butuh rebranding), status otomatis
-// dikembalikan ke tahap awal (SUBMITTED) supaya tidak "nyangkut" di NOT REQUIRED.
+// Status Proses dan Perlu Rebranding SALING MENGUNCI:
+// - Perlu Rebranding = "Tidak"  -> status WAJIB "NOT REQUIRED" (otomatis, tidak bisa pilih tahap lain)
+// - Perlu Rebranding = "Ya"     -> status WAJIB masuk alur proses, dimulai dari "SUBMITTED"
+//                                   ("NOT REQUIRED" tidak bisa dipilih sama sekali)
 function reconcileStatusWithRebranding(){
-  const kondisi = $('fldKondisi').value;
-  const notNeeded = (kondisi === 'Baik') && (currentRebrand === 'Tidak');
-  if(notNeeded && currentStatus !== 'NOT REQUIRED'){
+  if(currentRebrand === 'Tidak'){
     currentStatus = 'NOT REQUIRED';
-    renderMiniRoute();
-  } else if(!notNeeded && currentStatus === 'NOT REQUIRED'){
-    currentStatus = DEFAULT_STAGE;
-    renderMiniRoute();
+  } else if(currentStatus === 'NOT REQUIRED'){
+    currentStatus = DEFAULT_STAGE; // baru saja beralih dari "tidak perlu" -> wajib mulai dari SUBMITTED
   }
+  renderMiniRoute();
 }
 
 $('fldKondisi').addEventListener('change', ()=>{
@@ -959,13 +959,23 @@ $('btnRebrandTidak').onclick = ()=>{ currentRebrand='Tidak'; renderRebrandToggle
 
 function renderMiniRoute(){
   const curIdx = STAGES.indexOf(currentStatus);
+  // Kalau Perlu Rebranding = "Tidak": hanya tombol "NOT REQUIRED" yang bisa diklik.
+  // Kalau "Ya": tombol "NOT REQUIRED" dikunci, hanya tahap proses (SUBMITTED dst.) yang bisa diklik.
+  const lockedToNotRequired = currentRebrand === 'Tidak';
   $('miniRoute').innerHTML = STAGES.map((s,i)=>{
     let cls = '';
     if(i === curIdx) cls = 'active'; else if(i < curIdx) cls = 'past';
-    return `<button type="button" class="mini-stage ${cls}" data-stage="${s}">${s}</button>`;
+    const isNotRequiredBtn = (s === 'NOT REQUIRED');
+    const isDisabled = lockedToNotRequired ? !isNotRequiredBtn : isNotRequiredBtn;
+    if(isDisabled) cls += ' disabled';
+    return `<button type="button" class="mini-stage ${cls}" data-stage="${s}" ${isDisabled?'disabled':''}>${s}</button>`;
   }).join('');
   $('miniRoute').querySelectorAll('.mini-stage').forEach(btn=>{
-    btn.onclick = ()=>{ currentStatus = btn.getAttribute('data-stage'); renderMiniRoute(); };
+    btn.onclick = ()=>{
+      if(btn.disabled) return;
+      currentStatus = btn.getAttribute('data-stage');
+      renderMiniRoute();
+    };
   });
 }
 
