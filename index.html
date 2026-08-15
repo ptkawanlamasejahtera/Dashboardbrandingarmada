@@ -253,9 +253,9 @@
   .toggle-btn.on-ya{background:var(--alert-soft); border-color:var(--alert); color:var(--alert);}
   .toggle-btn.on-tidak{background:var(--green-soft); border-color:var(--green); color:var(--green);}
 
-  .mini-route{display:flex; gap:4px; margin-bottom:6px;}
+  .mini-route{display:flex; gap:4px; margin-bottom:6px; flex-wrap:wrap;}
   .mini-stage{
-    flex:1; text-align:center; padding:8px 2px; border-radius:6px; border:1px solid var(--line-strong);
+    flex:1 1 78px; text-align:center; padding:8px 2px; border-radius:6px; border:1px solid var(--line-strong);
     background:#fff; font-size:10.5px; font-weight:600; color:var(--muted); line-height:1.2;
   }
   .mini-stage.active{background:var(--route); border-color:var(--route); color:#fff;}
@@ -492,9 +492,10 @@
    ========================================================= */
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzH5u2hDStJ-ZraeXeZPtHRatos_86N8Grqga6wO8M5rpOD-JZq0k0Mwszh6aKtTYoj/exec';
 
-const STAGES = ['SUBMITTED','HELPDESK','WAITING PO','PO READY','SCHEDULED','IN PROGRESS','COMPLETED'];
+const STAGES = ['NOT REQUIRED','SUBMITTED','HELPDESK','WAITING PO','PO READY','SCHEDULED','IN PROGRESS','COMPLETED'];
+const DEFAULT_STAGE = 'SUBMITTED'; // dipakai sebagai status awal armada baru / fallback — bukan STAGES[0], karena STAGES[0] sekarang "NOT REQUIRED"
 const STAGE_COLORS = {
-  'SUBMITTED':'#8a8f95','HELPDESK':'#B8790E','WAITING PO':'#B8790E','PO READY':'#B8790E',
+  'NOT REQUIRED':'#2E7D4F','SUBMITTED':'#8a8f95','HELPDESK':'#B8790E','WAITING PO':'#B8790E','PO READY':'#B8790E',
   'SCHEDULED':'#B8790E','IN PROGRESS':'#B8790E','COMPLETED':'#2E7D4F'
 };
 const KONDISI_COLORS = {
@@ -506,7 +507,7 @@ let editingId = null;       // null = create mode
 let openedAsNew = false;    // true when panel was opened via "+ Tambah Armada" (not by clicking an existing card)
 let autoLinked = false;     // true when editingId was set automatically by matching an existing Nopol/Kode, not by the user opening that card directly
 let duplicateBlocked = false; // true when current Nopol/Kode belongs to a DIFFERENT existing record than the one being edited
-let currentStatus = STAGES[0];
+let currentStatus = DEFAULT_STAGE;
 let currentRebrand = 'Ya';
 let photos = { before:null, after:null };  // compressed base64
 let existingPhotoUrls = { before:'', after:'' };
@@ -659,7 +660,7 @@ function render(){
   // stats (based on ALL data, not filtered — top-level truth)
   $('statTotal').textContent = DATA.length;
   $('statRebrand').textContent = DATA.filter(r=>r['Perlu Rebranding']==='Ya').length;
-  $('statProses').textContent = DATA.filter(r=>r['Status Proses'] && r['Status Proses']!=='SUBMITTED' && r['Status Proses']!=='COMPLETED').length;
+  $('statProses').textContent = DATA.filter(r=>r['Status Proses'] && r['Status Proses']!=='SUBMITTED' && r['Status Proses']!=='COMPLETED' && r['Status Proses']!=='NOT REQUIRED').length;
   $('statSelesai').textContent = DATA.filter(r=>r['Status Proses']==='COMPLETED').length;
 
   renderRouteSummary();
@@ -696,7 +697,7 @@ function renderRouteSummary(){
   const track = $('routeTrack');
   track.innerHTML = STAGES.map((s,i)=>{
     const count = DATA.filter(r=>r['Status Proses']===s).length;
-    return `<div class="route-node ${s==='COMPLETED'?'done':''}">
+    return `<div class="route-node ${(s==='COMPLETED'||s==='NOT REQUIRED')?'done':''}">
       <div class="route-line"></div>
       <div class="dot">${i+1}</div>
       <div class="cnt mono">${count}</div>
@@ -801,7 +802,7 @@ function fillFormFromRecord(record){
   $('fldPic').value = record['PIC Lapangan']||'';
   $('fldTarget').value = record['Target Selesai']||'';
 
-  currentStatus = record['Status Proses'] || STAGES[0];
+  currentStatus = record['Status Proses'] || DEFAULT_STAGE;
   currentRebrand = record['Perlu Rebranding'] || (needsRebranding($('fldKondisi').value)?'Ya':'Tidak');
   renderMiniRoute();
   renderRebrandToggle();
@@ -841,7 +842,7 @@ function openPanel(id){
     $('fldKondisi').value = 'Baik';
     $('fldPic').value = '';
     $('fldTarget').value = '';
-    currentStatus = STAGES[0];
+    currentStatus = DEFAULT_STAGE;
     currentRebrand = 'Tidak';
     renderMiniRoute();
     renderRebrandToggle();
@@ -923,20 +924,38 @@ function scheduleIdentityCheck(){
 $('fldNopol').addEventListener('input', scheduleIdentityCheck);
 $('fldKode').addEventListener('input', scheduleIdentityCheck);
 
+// Kalau Kondisi Reklame = "Baik" DAN Perlu Rebranding = "Tidak", armada ini
+// tidak masuk alur proses rebranding sama sekali -> status otomatis "NOT REQUIRED".
+// Kalau kondisinya berubah lagi (jadi butuh rebranding), status otomatis
+// dikembalikan ke tahap awal (SUBMITTED) supaya tidak "nyangkut" di NOT REQUIRED.
+function reconcileStatusWithRebranding(){
+  const kondisi = $('fldKondisi').value;
+  const notNeeded = (kondisi === 'Baik') && (currentRebrand === 'Tidak');
+  if(notNeeded && currentStatus !== 'NOT REQUIRED'){
+    currentStatus = 'NOT REQUIRED';
+    renderMiniRoute();
+  } else if(!notNeeded && currentStatus === 'NOT REQUIRED'){
+    currentStatus = DEFAULT_STAGE;
+    renderMiniRoute();
+  }
+}
+
 $('fldKondisi').addEventListener('change', ()=>{
   // suggest a default, but don't override an explicit user choice silently for existing edits
   if(!editingId){
     currentRebrand = needsRebranding($('fldKondisi').value) ? 'Ya' : 'Tidak';
     renderRebrandToggle();
   }
+  reconcileStatusWithRebranding();
 });
 
 function renderRebrandToggle(){
   $('btnRebrandYa').className = 'toggle-btn' + (currentRebrand==='Ya' ? ' on-ya':'');
   $('btnRebrandTidak').className = 'toggle-btn' + (currentRebrand==='Tidak' ? ' on-tidak':'');
 }
-$('btnRebrandYa').onclick = ()=>{ currentRebrand='Ya'; renderRebrandToggle(); };
-$('btnRebrandTidak').onclick = ()=>{ currentRebrand='Tidak'; renderRebrandToggle(); };
+$('btnRebrandYa').onclick = ()=>{ currentRebrand='Ya'; renderRebrandToggle(); reconcileStatusWithRebranding(); };
+$('btnRebrandTidak').onclick = ()=>{ currentRebrand='Tidak'; renderRebrandToggle(); reconcileStatusWithRebranding(); };
+
 
 function renderMiniRoute(){
   const curIdx = STAGES.indexOf(currentStatus);
