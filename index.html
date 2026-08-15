@@ -377,6 +377,11 @@
         </div>
 
         <div class="field">
+          <label>Kode Armada</label>
+          <input type="text" id="fldKode" placeholder="mis. FBI-021" style="text-transform:uppercase;">
+        </div>
+
+        <div class="field">
           <label>Nomor Polisi</label>
           <input type="text" id="fldNopol" placeholder="B 1234 XYZ" style="text-transform:uppercase;">
         </div>
@@ -608,7 +613,7 @@ function filteredData(){
   const rebrandOnly = $('fRebrandOnly').checked;
   return DATA.filter(r=>{
     if(search){
-      const hay = ((r.Nopol||'')+' '+(r['Jenis Armada']||'')+' '+(r['PIC Lapangan']||'')).toLowerCase();
+      const hay = ((r['Kode Armada']||'')+' '+(r.Nopol||'')+' '+(r['Jenis Armada']||'')+' '+(r['PIC Lapangan']||'')).toLowerCase();
       if(hay.indexOf(search) === -1) return false;
     }
     if(cabang && r.Cabang !== cabang) return false;
@@ -711,7 +716,10 @@ function cardHtml(r){
     .map(u=>`<img src="${driveThumb(u)}" loading="lazy">`).join('');
   return `<button class="plate-card" data-open-id="${r.ID}" style="text-align:left;">
     <div class="plate-top">
-      <span class="plate-badge">${escapeHtml(r.Nopol||'-')}</span>
+      <span style="display:flex; align-items:center; gap:6px; overflow:hidden;">
+        ${r['Kode Armada'] ? `<span class="tag mono" style="flex-shrink:0;">${escapeHtml(r['Kode Armada'])}</span>` : ''}
+        <span class="plate-badge">${escapeHtml(r.Nopol||'-')}</span>
+      </span>
       <span class="dot-kondisi" style="background:${kColor}" title="${r['Kondisi Reklame']||''}"></span>
     </div>
     <div class="plate-meta">
@@ -731,7 +739,7 @@ function renderList(rows){
   const host = $('listView');
   host.innerHTML = `<div class="table-wrap"><table>
     <thead><tr>
-      <th>Nopol</th><th>Jenis</th><th>Cabang</th><th>Kondisi</th><th>Rebranding</th>
+      <th>Kode Armada</th><th>Nopol</th><th>Jenis</th><th>Cabang</th><th>Kondisi</th><th>Rebranding</th>
       <th>Status</th><th>PIC</th><th>Target</th><th>Update Terakhir</th>
     </tr></thead>
     <tbody id="listBody"></tbody>
@@ -740,6 +748,7 @@ function renderList(rows){
   body.innerHTML = rows.map(r=>{
     const sColor = STAGE_COLORS[r['Status Proses']] || '#8a8f95';
     return `<tr data-open-id="${r.ID}">
+      <td class="mono">${escapeHtml(r['Kode Armada']||'-')}</td>
       <td class="mono">${escapeHtml(r.Nopol||'-')}</td>
       <td>${escapeHtml(r['Jenis Armada']||'-')}</td>
       <td>${escapeHtml(r.Cabang||'-')}</td>
@@ -776,6 +785,7 @@ function openPanel(id){
   const record = id ? DATA.find(r=>r.ID===id) : null;
 
   $('panelTitle').textContent = record ? 'Detail Armada' : 'Tambah Armada';
+  $('fldKode').value = record ? record['Kode Armada']||'' : '';
   $('fldNopol').value = record ? record.Nopol||'' : '';
   $('fldJenis').value = record ? record['Jenis Armada']||'' : '';
   $('fldCabang').value = record ? record.Cabang||'' : '';
@@ -945,9 +955,11 @@ $('btnSavePanel').addEventListener('click', ()=>{
   const isNew = !editingId;
   const noteText = $('fldCatatan').value.trim();
 
+  const kodeArmada = $('fldKode').value.trim().toUpperCase();
   const payload = {
     action: 'save',
     id: id,
+    kode_armada: kodeArmada,
     nopol: nopol,
     jenis: $('fldJenis').value.trim(),
     cabang: $('fldCabang').value.trim(),
@@ -970,6 +982,7 @@ $('btnSavePanel').addEventListener('click', ()=>{
     rec = { ID:id, 'Riwayat':'' };
     DATA.push(rec);
   }
+  rec['Kode Armada'] = payload.kode_armada;
   rec.Nopol = payload.nopol;
   rec['Jenis Armada'] = payload.jenis;
   rec.Cabang = payload.cabang;
