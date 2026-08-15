@@ -239,6 +239,12 @@
     font-family:'Inter',sans-serif; font-size:14px; background:#fff; color:var(--ink);
   }
   .field textarea{resize:vertical; min-height:64px;}
+  .field-hint{
+    display:none; font-size:11.5px; line-height:1.4; padding:8px 10px; border-radius:7px;
+    margin:-2px 0 14px;
+  }
+  .field-hint.info{display:block; background:var(--route-soft); color:var(--route);}
+  .field-hint.warn{display:block; background:var(--alert-soft); color:var(--alert); font-weight:600;}
   .toggle-row{display:flex; gap:8px;}
   .toggle-btn{
     flex:1; padding:9px; border:1px solid var(--line-strong); border-radius:7px; background:#fff;
@@ -386,6 +392,8 @@
           <input type="text" id="fldNopol" placeholder="B 1234 XYZ" style="text-transform:uppercase;">
         </div>
 
+        <div class="field-hint" id="linkStatus"></div>
+
         <div class="field" style="display:flex; gap:10px;">
           <div style="flex:1;">
             <label>Jenis Armada</label>
@@ -495,6 +503,9 @@ const KONDISI_COLORS = {
 
 let DATA = [];              // all rows from sheet
 let editingId = null;       // null = create mode
+let openedAsNew = false;    // true when panel was opened via "+ Tambah Armada" (not by clicking an existing card)
+let autoLinked = false;     // true when editingId was set automatically by matching an existing Nopol/Kode, not by the user opening that card directly
+let duplicateBlocked = false; // true when current Nopol/Kode belongs to a DIFFERENT existing record than the one being edited
 let currentStatus = STAGES[0];
 let currentRebrand = 'Ya';
 let photos = { before:null, after:null };  // compressed base64
@@ -778,41 +789,139 @@ function escapeHtml(s){
 /* =========================================================
    PANEL (add / edit)
    ========================================================= */
-function openPanel(id){
-  editingId = id;
-  photos = { before:null, after:null };
-  existingPhotoUrls = { before:'', after:'' };
-  const record = id ? DATA.find(r=>r.ID===id) : null;
+// Isi seluruh field form dari sebuah record yang SUDAH ADA di Data Tabel Armada.
+// Dipakai baik saat membuka panel untuk edit langsung, maupun saat sistem
+// otomatis menyambungkan form "Tambah Armada" ke data yang sudah tersedia.
+function fillFormFromRecord(record){
+  $('fldKode').value = record['Kode Armada']||'';
+  $('fldNopol').value = record.Nopol||'';
+  $('fldJenis').value = record['Jenis Armada']||'';
+  $('fldCabang').value = record.Cabang||'';
+  $('fldKondisi').value = record['Kondisi Reklame']||'Baik';
+  $('fldPic').value = record['PIC Lapangan']||'';
+  $('fldTarget').value = record['Target Selesai']||'';
 
-  $('panelTitle').textContent = record ? 'Detail Armada' : 'Tambah Armada';
-  $('fldKode').value = record ? record['Kode Armada']||'' : '';
-  $('fldNopol').value = record ? record.Nopol||'' : '';
-  $('fldJenis').value = record ? record['Jenis Armada']||'' : '';
-  $('fldCabang').value = record ? record.Cabang||'' : '';
-  $('fldKondisi').value = record ? record['Kondisi Reklame']||'Baik' : 'Baik';
-  $('fldPic').value = record ? record['PIC Lapangan']||'' : '';
-  $('fldTarget').value = record ? record['Target Selesai']||'' : '';
-  $('fldCatatan').value = '';
-
-  currentStatus = record ? (record['Status Proses'] || STAGES[0]) : STAGES[0];
-  currentRebrand = record ? (record['Perlu Rebranding'] || (needsRebranding($('fldKondisi').value)?'Ya':'Tidak')) : 'Tidak';
+  currentStatus = record['Status Proses'] || STAGES[0];
+  currentRebrand = record['Perlu Rebranding'] || (needsRebranding($('fldKondisi').value)?'Ya':'Tidak');
   renderMiniRoute();
   renderRebrandToggle();
 
-  existingPhotoUrls.before = record ? record['Foto Before']||'' : '';
-  existingPhotoUrls.after = record ? record['Foto After']||'' : '';
+  existingPhotoUrls.before = record['Foto Before']||'';
+  existingPhotoUrls.after = record['Foto After']||'';
+  photos = { before:null, after:null }; // jangan bawa foto yang sempat dipilih untuk identitas sebelumnya
   renderPhotoBox('before'); renderPhotoBox('after');
 
-  if(record && record.Riwayat){
+  if(record.Riwayat){
     $('riwayatField').style.display = 'block';
     $('riwayatBox').textContent = record.Riwayat;
   } else {
     $('riwayatField').style.display = 'none';
   }
+}
+
+function openPanel(id){
+  editingId = id;
+  openedAsNew = !id;
+  autoLinked = false;
+  duplicateBlocked = false;
+  setLinkStatus(null);
+  photos = { before:null, after:null };
+  existingPhotoUrls = { before:'', after:'' };
+  const record = id ? DATA.find(r=>r.ID===id) : null;
+
+  $('panelTitle').textContent = record ? 'Detail Armada' : 'Tambah Armada';
+
+  if(record){
+    fillFormFromRecord(record);
+  } else {
+    $('fldKode').value = '';
+    $('fldNopol').value = '';
+    $('fldJenis').value = '';
+    $('fldCabang').value = '';
+    $('fldKondisi').value = 'Baik';
+    $('fldPic').value = '';
+    $('fldTarget').value = '';
+    currentStatus = STAGES[0];
+    currentRebrand = 'Tidak';
+    renderMiniRoute();
+    renderRebrandToggle();
+    renderPhotoBox('before'); renderPhotoBox('after');
+    $('riwayatField').style.display = 'none';
+  }
+  $('fldCatatan').value = '';
 
   $('overlay').classList.add('open');
 }
 function closePanel(){ $('overlay').classList.remove('open'); }
+
+/* =========================================================
+   AUTO-LINK KE DATA TABEL ARMADA berdasarkan Nopol / Kode Armada
+   — mencegah duplikasi dan menjaga form + tabel tetap sinkron
+   ========================================================= */
+function setLinkStatus(kind, msg){
+  const el = $('linkStatus');
+  if(!kind){ el.className = 'field-hint'; el.textContent=''; return; }
+  el.className = 'field-hint ' + kind;
+  el.textContent = msg;
+}
+function normKey(s){ return (s||'').toString().trim().toUpperCase().replace(/\s+/g,''); }
+function findMatchingRecord(nopol, kode, excludeId){
+  const nNopol = normKey(nopol), nKode = normKey(kode);
+  if(!nNopol && !nKode) return null;
+  return DATA.find(r=>{
+    if(excludeId && r.ID===excludeId) return false;
+    const rNopol = normKey(r.Nopol), rKode = normKey(r['Kode Armada']);
+    return (nNopol && rNopol && rNopol===nNopol) || (nKode && rKode && rKode===nKode);
+  }) || null;
+}
+
+function checkIdentityMatch(){
+  const nopolVal = $('fldNopol').value;
+  const kodeVal = $('fldKode').value;
+  const match = findMatchingRecord(nopolVal, kodeVal, null);
+
+  if(!match){
+    duplicateBlocked = false;
+    setLinkStatus(null);
+    if(openedAsNew && autoLinked){
+      // sebelumnya tersambung ke data lain, tapi nilai sudah diubah dan tidak cocok lagi
+      // -> kembali ke mode "armada baru"
+      editingId = null;
+      autoLinked = false;
+      $('panelTitle').textContent = 'Tambah Armada';
+      $('riwayatField').style.display = 'none';
+    }
+    return;
+  }
+
+  if(editingId && match.ID === editingId){
+    duplicateBlocked = false;
+    setLinkStatus('info', 'Sudah terhubung ke data Armada ini — perubahan akan memperbarui data yang ada, bukan membuat baru.');
+    return;
+  }
+
+  if(openedAsNew){
+    // Nopol/Kode cocok dengan data yang sudah ada -> sambungkan otomatis
+    fillFormFromRecord(match);
+    editingId = match.ID;
+    autoLinked = true;
+    duplicateBlocked = false;
+    $('panelTitle').textContent = 'Detail Armada';
+    setLinkStatus('info', 'Armada dengan Nopol/Kode ini sudah terdaftar di Data Tabel — data diambil otomatis. Perubahan akan memperbarui data ini.');
+  } else {
+    // sedang edit record lain, tapi Nopol/Kode diubah jadi milik record lain -> cegah duplikasi
+    duplicateBlocked = true;
+    setLinkStatus('warn', 'Nopol/Kode ini sudah dipakai armada lain (' + (match['Kode Armada']||match.Nopol||'') + '). Tidak bisa disimpan sebagai data duplikat — ubah nilainya.');
+  }
+}
+
+let identityDebounce = null;
+function scheduleIdentityCheck(){
+  clearTimeout(identityDebounce);
+  identityDebounce = setTimeout(checkIdentityMatch, 220);
+}
+$('fldNopol').addEventListener('input', scheduleIdentityCheck);
+$('fldKode').addEventListener('input', scheduleIdentityCheck);
 
 $('fldKondisi').addEventListener('change', ()=>{
   // suggest a default, but don't override an explicit user choice silently for existing edits
@@ -945,8 +1054,19 @@ $('camFlash').addEventListener('click', ()=>{
 /* ---------- save ---------- */
 $('btnSavePanel').addEventListener('click', ()=>{
   const updater = $('fldUpdater').value.trim();
-  const nopol = $('fldNopol').value.trim().toUpperCase();
   if(!updater){ toast('Isi nama Anda dulu ya'); $('fldUpdater').focus(); return; }
+
+  // Pengecekan akhir yang otoritatif: pastikan Nopol/Kode Armada tersambung
+  // ke data yang sudah ada (kalau cocok) dan cegah duplikasi, terlepas dari
+  // apakah pengecekan otomatis saat mengetik sempat jalan atau belum.
+  clearTimeout(identityDebounce);
+  checkIdentityMatch();
+  if(duplicateBlocked){
+    toast('Tidak bisa disimpan — Nopol/Kode ini sudah dipakai armada lain.');
+    return;
+  }
+
+  const nopol = $('fldNopol').value.trim().toUpperCase();
   if(!nopol){ toast('Nomor polisi wajib diisi'); $('fldNopol').focus(); return; }
 
   try{ localStorage.setItem('branding_updater_name', updater); }catch(e){}
