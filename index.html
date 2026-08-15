@@ -268,9 +268,18 @@
     flex:1; aspect-ratio:4/3; border:2px dashed var(--line-strong); border-radius:8px;
     display:flex; align-items:center; justify-content:center; flex-direction:column; gap:4px;
     background:#fff; color:var(--muted); font-size:11.5px; overflow:hidden; position:relative;
+    cursor:pointer;
   }
   .photo-box img{width:100%; height:100%; object-fit:cover; position:absolute; inset:0;}
   .photo-box .plus{font-size:22px; font-family:'Oswald',sans-serif;}
+  .photo-box.filled{border-style:solid; border-color:var(--green);}
+
+  .photo-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:4px;}
+  .photo-cell{display:flex; flex-direction:column; gap:4px;}
+  .photo-cell-label{font-size:11px; color:var(--muted); text-align:center; font-weight:600;}
+  .photo-box.locked{opacity:0.4; cursor:not-allowed; pointer-events:none;}
+  .doc-progress{font-size:11.5px; color:var(--muted); margin:-4px 0 14px;}
+  .doc-progress b{color:var(--ink);}
 
   .riwayat-box{
     background:#fff; border:1px solid var(--line); border-radius:8px; padding:10px 12px;
@@ -441,20 +450,17 @@
         </div>
 
         <div class="field">
-          <label>Foto Kondisi Saat Ini (Before)</label>
-          <div class="photo-box" id="boxBefore" data-key="before">
-            <span class="plus">+</span><span>Ambil / unggah foto</span>
-          </div>
-          <input type="file" accept="image/*" id="fileBefore" style="display:none;">
+          <label>Dokumentasi Before — kondisi sebelum Branding/Rebranding</label>
+          <div class="photo-grid" id="gridBefore"></div>
         </div>
 
         <div class="field">
-          <label>Foto Setelah Rebranding (After)</label>
-          <div class="photo-box" id="boxAfter" data-key="after">
-            <span class="plus">+</span><span>Ambil / unggah foto</span>
-          </div>
-          <input type="file" accept="image/*" id="fileAfter" style="display:none;">
+          <label>Dokumentasi After — kondisi setelah Branding/Rebranding selesai</label>
+          <div class="field-hint" id="afterLockNote"></div>
+          <div class="photo-grid" id="gridAfter"></div>
         </div>
+
+        <div class="doc-progress" id="docProgress"></div>
 
         <div class="field">
           <label>Catatan Update</label>
@@ -511,8 +517,34 @@ let autoLinked = false;     // true when editingId was set automatically by matc
 let duplicateBlocked = false; // true when current Nopol/Kode belongs to a DIFFERENT existing record than the one being edited
 let currentStatus = DEFAULT_STAGE;
 let currentRebrand = 'Ya';
-let photos = { before:null, after:null };  // compressed base64
-let existingPhotoUrls = { before:'', after:'' };
+
+// Dokumentasi foto: setiap sisi (Before/After) wajib 4 sudut.
+const PHOTO_PARTS = [
+  { part:'depan', label:'Depan' },
+  { part:'kanan', label:'Samping Kanan' },
+  { part:'kiri', label:'Samping Kiri' },
+  { part:'belakang', label:'Belakang' }
+];
+const PHOTO_SIDES = [
+  { side:'before', label:'Before' },
+  { side:'after', label:'After' }
+];
+const PHOTO_SLOTS = [];
+PHOTO_SIDES.forEach(sd => PHOTO_PARTS.forEach(p => {
+  PHOTO_SLOTS.push({
+    key: sd.side + '_' + p.part,
+    side: sd.side,
+    partLabel: p.label,
+    column: 'Foto ' + sd.label + ' ' + p.label,          // nama kolom di Sheet
+    payloadField: 'foto_' + sd.side + '_' + p.part        // key yang dikirim ke Code.gs
+  });
+}));
+function emptyPhotosState(){ const o={}; PHOTO_SLOTS.forEach(s=>o[s.key]=null); return o; }
+function emptyPhotoUrlsState(){ const o={}; PHOTO_SLOTS.forEach(s=>o[s.key]=''); return o; }
+function docCompleteCount(r){ return PHOTO_SLOTS.filter(s=>r[s.column]).length; }
+
+let photos = emptyPhotosState();          // compressed base64 yang baru dipilih, per sisi/sudut
+let existingPhotoUrls = emptyPhotoUrlsState(); // URL foto yang sudah tersimpan di Drive, per sisi/sudut
 let camTargetKey = null;
 let camStream = null;
 let camReady = false;
@@ -730,8 +762,11 @@ function renderBoard(rows){
 
 function cardHtml(r){
   const kColor = KONDISI_COLORS[r['Kondisi Reklame']] || '#8a8f95';
-  const photosHtml = [r['Foto Before'], r['Foto After']].filter(Boolean)
+  const beforeThumb = PHOTO_SLOTS.find(s=>s.side==='before' && r[s.column]);
+  const afterThumb = PHOTO_SLOTS.find(s=>s.side==='after' && r[s.column]);
+  const photosHtml = [beforeThumb && r[beforeThumb.column], afterThumb && r[afterThumb.column]].filter(Boolean)
     .map(u=>`<img src="${driveThumb(u)}" loading="lazy">`).join('');
+  const docCount = docCompleteCount(r);
   return `<button class="plate-card" data-open-id="${r.ID}" style="text-align:left;">
     <div class="plate-top">
       <span style="display:flex; align-items:center; gap:6px; overflow:hidden;">
@@ -743,6 +778,7 @@ function cardHtml(r){
     <div class="plate-meta">
       <span class="tag">${escapeHtml(r['Jenis Armada']||'-')}</span>
       <span class="tag">${escapeHtml(r.Cabang||'-')}</span>
+      ${r['Perlu Rebranding']==='Ya' ? `<span class="tag mono" style="${docCount===8?'color:var(--green);':''}">Dok ${docCount}/8</span>` : ''}
     </div>
     ${photosHtml ? `<div class="plate-photos">${photosHtml}</div>` : ''}
     ${r.Catatan ? `<div class="plate-note">${escapeHtml(r.Catatan)}</div>` : ''}
@@ -813,10 +849,10 @@ function fillFormFromRecord(record){
   renderMiniRoute();
   renderRebrandToggle();
 
-  existingPhotoUrls.before = record['Foto Before']||'';
-  existingPhotoUrls.after = record['Foto After']||'';
-  photos = { before:null, after:null }; // jangan bawa foto yang sempat dipilih untuk identitas sebelumnya
-  renderPhotoBox('before'); renderPhotoBox('after');
+  existingPhotoUrls = emptyPhotoUrlsState();
+  PHOTO_SLOTS.forEach(s=> existingPhotoUrls[s.key] = record[s.column] || '');
+  photos = emptyPhotosState(); // jangan bawa foto yang sempat dipilih untuk identitas sebelumnya
+  renderAllPhotoBoxes();
 
   if(record.Riwayat){
     $('riwayatField').style.display = 'block';
@@ -832,8 +868,8 @@ function openPanel(id){
   autoLinked = false;
   duplicateBlocked = false;
   setLinkStatus(null);
-  photos = { before:null, after:null };
-  existingPhotoUrls = { before:'', after:'' };
+  photos = emptyPhotosState();
+  existingPhotoUrls = emptyPhotoUrlsState();
   const record = id ? DATA.find(r=>r.ID===id) : null;
 
   $('panelTitle').textContent = record ? 'Detail Armada' : 'Tambah Armada';
@@ -852,7 +888,7 @@ function openPanel(id){
     currentRebrand = 'Tidak';
     renderRebrandToggle();
     reconcileStatusWithRebranding();
-    renderPhotoBox('before'); renderPhotoBox('after');
+    renderAllPhotoBoxes();
     $('riwayatField').style.display = 'none';
   }
   $('fldCatatan').value = '';
@@ -981,25 +1017,79 @@ function renderMiniRoute(){
       renderMiniRoute();
     };
   });
+  updateAfterLockState();
 }
 
+/* =========================================================
+   DOKUMENTASI FOTO — 4 sisi x Before/After (8 slot total)
+   ========================================================= */
+function renderPhotoGrids(){
+  ['before','after'].forEach(side=>{
+    const host = $(side === 'before' ? 'gridBefore' : 'gridAfter');
+    host.innerHTML = PHOTO_SLOTS.filter(s=>s.side===side).map(s=>`
+      <div class="photo-cell">
+        <div class="photo-box" id="box_${s.key}"><span class="plus">+</span><span>${s.partLabel}</span></div>
+        <div class="photo-cell-label">${s.partLabel}</div>
+        <input type="file" accept="image/*" style="display:none;" id="file_${s.key}">
+      </div>`).join('');
+  });
+  PHOTO_SLOTS.forEach(s=>{
+    $('box_' + s.key).addEventListener('click', ()=>{
+      if($('box_' + s.key).classList.contains('locked')) return;
+      startCamera(s.key);
+    });
+    $('file_' + s.key).addEventListener('change', e=> handleFileInput(e, s.key));
+  });
+}
+renderPhotoGrids();
+
 function renderPhotoBox(key){
-  const box = $(key === 'before' ? 'boxBefore' : 'boxAfter');
+  const box = $('box_' + key);
+  if(!box) return;
   const b64 = photos[key];
   const url = existingPhotoUrls[key];
+  const slot = PHOTO_SLOTS.find(s=>s.key===key);
+  box.classList.toggle('filled', !!(b64 || url));
   if(b64){
     box.innerHTML = `<img src="${b64}">`;
   } else if(url){
     box.innerHTML = `<img src="${driveThumb(url)}">`;
   } else {
-    box.innerHTML = `<span class="plus">+</span><span>Ambil / unggah foto</span>`;
+    box.innerHTML = `<span class="plus">+</span><span>${slot ? slot.partLabel : 'Ambil / unggah foto'}</span>`;
   }
 }
-$('boxBefore').addEventListener('click', ()=> startCamera('before'));
-$('boxAfter').addEventListener('click', ()=> startCamera('after'));
+function renderAllPhotoBoxes(){
+  PHOTO_SLOTS.forEach(s=> renderPhotoBox(s.key));
+  updateAfterLockState();
+  renderDocProgress();
+}
 
-$('fileBefore').addEventListener('change', e=> handleFileInput(e,'before'));
-$('fileAfter').addEventListener('change', e=> handleFileInput(e,'after'));
+// "Dokumentasi After hanya dapat diinput setelah status proses Branding/Rebranding selesai."
+function updateAfterLockState(){
+  const locked = currentStatus !== 'COMPLETED';
+  PHOTO_SLOTS.filter(s=>s.side==='after').forEach(s=>{
+    const box = $('box_' + s.key);
+    if(box) box.classList.toggle('locked', locked);
+  });
+  const note = $('afterLockNote');
+  if(!note) return;
+  if(locked){
+    note.className = 'field-hint warn';
+    note.textContent = 'Dokumentasi After baru bisa diisi setelah Status Proses = COMPLETED.';
+  } else {
+    note.className = 'field-hint';
+    note.textContent = '';
+  }
+}
+
+// "Sistem memastikan seluruh 8 foto (4 Before + 4 After) terisi sebelum dokumentasi dinyatakan lengkap."
+function renderDocProgress(){
+  const el = $('docProgress');
+  if(!el) return;
+  const filledCount = PHOTO_SLOTS.filter(s=> photos[s.key] || existingPhotoUrls[s.key]).length;
+  el.innerHTML = 'Dokumentasi: <b>' + filledCount + ' / 8</b> foto terisi' +
+    (filledCount === 8 ? ' — <span style="color:var(--green); font-weight:700;">Lengkap</span>' : '');
+}
 
 function handleFileInput(e, key){
   const file = e.target.files[0];
@@ -1007,6 +1097,7 @@ function handleFileInput(e, key){
   compressImage(file, 900, 0.55, dataUrl=>{
     photos[key] = dataUrl;
     renderPhotoBox(key);
+    renderDocProgress();
   });
   e.target.value = '';
 }
@@ -1033,7 +1124,7 @@ function startCamera(key){
   camTargetKey = key;
   const secure = window.isSecureContext && navigator.mediaDevices && navigator.mediaDevices.getUserMedia;
   if(!secure){
-    (key==='before' ? $('fileBefore') : $('fileAfter')).click();
+    $('file_' + key).click();
     return;
   }
   $('camOverlay').classList.add('open');
@@ -1050,7 +1141,7 @@ function startCamera(key){
     video.play().catch(()=>{});
   }).catch(()=>{
     closeCamera();
-    (key==='before' ? $('fileBefore') : $('fileAfter')).click();
+    $('file_' + key).click();
   });
 }
 function closeCamera(){
@@ -1073,6 +1164,7 @@ $('camShutter').addEventListener('click', ()=>{
     const dataUrl = canvas.toDataURL('image/jpeg', 0.55);
     photos[camTargetKey] = dataUrl;
     renderPhotoBox(camTargetKey);
+    renderDocProgress();
   }catch(err){ toast('Gagal mengambil foto, coba lagi.'); }
   finally{ closeCamera(); }
 });
@@ -1122,11 +1214,10 @@ $('btnSavePanel').addEventListener('click', ()=>{
     pic: $('fldPic').value.trim(),
     target_selesai: $('fldTarget').value,
     catatan: noteText,
-    foto_before: photos.before || '',
-    foto_after: photos.after || '',
     updated_by: updater,
     riwayat_note: isNew ? 'Armada ditambahkan' : ('Update: ' + (noteText || ('status → ' + currentStatus)))
   };
+  PHOTO_SLOTS.forEach(s=>{ payload[s.payloadField] = photos[s.key] || ''; });
 
   // optimistic local update
   const nowIso = new Date().toISOString();
@@ -1144,8 +1235,9 @@ $('btnSavePanel').addEventListener('click', ()=>{
   rec['Status Proses'] = payload.status;
   rec['PIC Lapangan'] = payload.pic;
   rec['Target Selesai'] = payload.target_selesai;
-  if(payload.foto_before) rec['Foto Before'] = payload.foto_before; // local preview only until sheet round-trip
-  if(payload.foto_after) rec['Foto After'] = payload.foto_after;
+  PHOTO_SLOTS.forEach(s=>{
+    if(payload[s.payloadField]) rec[s.column] = payload[s.payloadField]; // local preview only until sheet round-trip
+  });
   if(noteText) rec.Catatan = noteText;
   rec['Tanggal Update'] = nowIso;
   rec['Diupdate Oleh'] = updater;
