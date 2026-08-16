@@ -1127,7 +1127,7 @@ $('choiceCamera').addEventListener('click', ()=>{
 $('choiceUpload').addEventListener('click', ()=>{
   const key = photoChoiceKey;
   closePhotoChoice();
-  if(key) $('file_' + key).click();
+  if(key) openGalleryPicker(key);
 });
 $('choiceCancel').addEventListener('click', closePhotoChoice);
 $('photoChoiceOverlay').addEventListener('click', (e)=>{
@@ -1185,6 +1185,7 @@ function renderDocProgress(){
 
 function handleFileInput(e, key){
   const file = e.target.files[0];
+  e.target.removeAttribute('capture');
   if(!file) return;
   compressImage(file, 900, 0.55, dataUrl=>{
     photos[key] = dataUrl;
@@ -1212,16 +1213,31 @@ function compressImage(file, maxWidth, quality, callback){
 }
 
 /* ---------- in-page camera ---------- */
+function openGalleryPicker(key){
+  const input = $('file_' + key);
+  input.removeAttribute('capture'); // pastikan buka Galeri biasa, bukan diarahkan paksa ke kamera
+  input.click();
+}
+function openCameraCapture(key){
+  const input = $('file_' + key);
+  input.setAttribute('capture', 'environment'); // paksa HP membuka aplikasi Kamera, bukan Galeri
+  input.click();
+}
+
 function startCamera(key){
   camTargetKey = key;
   const secure = window.isSecureContext && navigator.mediaDevices && navigator.mediaDevices.getUserMedia;
   if(!secure){
-    $('file_' + key).click();
+    // Browser/koneksi tidak mendukung kamera in-page (mis. bukan HTTPS) —
+    // tetap arahkan ke aplikasi Kamera perangkat, JANGAN ke Galeri.
+    openCameraCapture(key);
     return;
   }
   $('camOverlay').classList.add('open');
   camReady = false;
-  const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 6000));
+  // Beri waktu lebih panjang: di banyak HP, dialog izin kamera baru muncul
+  // setelah beberapa saat, dan getUserMedia() belum resolve sampai user menjawabnya.
+  const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 15000));
   Promise.race([
     navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio:false }),
     timeout
@@ -1233,7 +1249,8 @@ function startCamera(key){
     video.play().catch(()=>{});
   }).catch(()=>{
     closeCamera();
-    $('file_' + key).click();
+    toast('Kamera dalam-halaman tidak bisa diakses, membuka aplikasi Kamera perangkat…');
+    openCameraCapture(key);
   });
 }
 function closeCamera(){
