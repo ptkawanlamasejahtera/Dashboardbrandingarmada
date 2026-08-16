@@ -241,6 +241,9 @@
   .field input:disabled, .field select:disabled{
     background:#F1F2ED; color:var(--muted); cursor:not-allowed;
   }
+  .field input.invalid, .field select.invalid{
+    border-color:var(--alert); background:#FDF3F1;
+  }
   .field textarea{resize:vertical; min-height:64px;}
   .field-hint{
     display:none; font-size:11.5px; line-height:1.4; padding:8px 10px; border-radius:7px;
@@ -276,6 +279,7 @@
   .photo-box img{width:100%; height:100%; object-fit:cover; position:absolute; inset:0;}
   .photo-box .plus{font-size:22px; font-family:'Oswald',sans-serif;}
   .photo-box.filled{border-style:solid; border-color:var(--green);}
+  .photo-box.invalid{border-style:solid; border-color:var(--alert); background:#FDF3F1;}
 
   .photo-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:4px;}
   .photo-cell{display:flex; flex-direction:column; gap:4px;}
@@ -872,6 +876,7 @@ function openPanel(id){
   autoLinked = false;
   duplicateBlocked = false;
   setLinkStatus(null);
+  clearAllValidationErrors();
   photos = emptyPhotosState();
   existingPhotoUrls = emptyPhotoUrlsState();
   const record = id ? DATA.find(r=>r.ID===id) : null;
@@ -1074,6 +1079,7 @@ function renderPhotoBox(key){
   const url = existingPhotoUrls[key];
   const slot = PHOTO_SLOTS.find(s=>s.key===key);
   box.classList.toggle('filled', !!(b64 || url));
+  if(b64 || url) box.classList.remove('invalid');
   if(b64){
     box.innerHTML = `<img src="${b64}">`;
   } else if(url){
@@ -1200,11 +1206,78 @@ $('camFlash').addEventListener('click', ()=>{
   track.applyConstraints({ advanced:[{ torch: !torchOn }] }).then(()=>{ torchOn = !torchOn; });
 });
 
+/* ---------- validasi form ---------- */
+// Seluruh field pada Form Tambah Armada wajib diisi, KECUALI Catatan (opsional).
+// Target Selesai hanya wajib kalau Perlu Rebranding = "Ya" (kalau "Tidak", field ini
+// memang dikunci/dikosongkan otomatis — lihat updateTargetLockState()).
+// Dokumentasi Before wajib 4 sisi selalu. Dokumentasi After wajib 4 sisi HANYA kalau
+// Perlu Rebranding = "Ya" DAN Status Proses = "COMPLETED" (persis kondisi After terbuka/tidak terkunci).
+const REQUIRED_TEXT_FIELDS = [
+  { id:'fldKode', label:'Kode Armada' },
+  { id:'fldNopol', label:'Nomor Polisi' },
+  { id:'fldJenis', label:'Type Armada' },
+  { id:'fldCabang', label:'Site' },
+  { id:'fldKondisi', label:'Kondisi Reklame' },
+  { id:'fldPic', label:'PIC Lapangan' },
+  { id:'fldUpdater', label:'Nama Anda' }
+];
+function clearFieldError(el){ if(el) el.classList.remove('invalid'); }
+function markFieldError(el){ if(el) el.classList.add('invalid'); }
+function clearAllValidationErrors(){
+  REQUIRED_TEXT_FIELDS.forEach(f=> clearFieldError($(f.id)));
+  clearFieldError($('fldTarget'));
+  PHOTO_SLOTS.forEach(s=>{
+    const box = $('box_' + s.key);
+    if(box) box.classList.remove('invalid');
+  });
+}
+REQUIRED_TEXT_FIELDS.forEach(f=>{
+  const el = $(f.id);
+  el.addEventListener('input', ()=> clearFieldError(el));
+  el.addEventListener('change', ()=> clearFieldError(el));
+});
+$('fldTarget').addEventListener('input', ()=> clearFieldError($('fldTarget')));
+
+function validateForm(){
+  const errors = [];
+
+  REQUIRED_TEXT_FIELDS.forEach(f=>{
+    const el = $(f.id);
+    clearFieldError(el);
+    if(!el.value || !el.value.trim()){
+      markFieldError(el);
+      errors.push({ el, label:f.label });
+    }
+  });
+
+  const targetEl = $('fldTarget');
+  clearFieldError(targetEl);
+  if(currentRebrand === 'Ya' && !targetEl.value){
+    markFieldError(targetEl);
+    errors.push({ el:targetEl, label:'Target Selesai' });
+  }
+
+  PHOTO_SLOTS.filter(s=>s.side==='before').forEach(s=>{
+    const box = $('box_' + s.key);
+    const filled = photos[s.key] || existingPhotoUrls[s.key];
+    if(box) box.classList.toggle('invalid', !filled);
+    if(!filled) errors.push({ el:box, label:'Dokumentasi Before - ' + s.partLabel });
+  });
+
+  const afterRequired = currentRebrand === 'Ya' && currentStatus === 'COMPLETED';
+  PHOTO_SLOTS.filter(s=>s.side==='after').forEach(s=>{
+    const box = $('box_' + s.key);
+    const filled = photos[s.key] || existingPhotoUrls[s.key];
+    const missing = afterRequired && !filled;
+    if(box) box.classList.toggle('invalid', missing);
+    if(missing) errors.push({ el:box, label:'Dokumentasi After - ' + s.partLabel });
+  });
+
+  return errors;
+}
+
 /* ---------- save ---------- */
 $('btnSavePanel').addEventListener('click', ()=>{
-  const updater = $('fldUpdater').value.trim();
-  if(!updater){ toast('Isi nama Anda dulu ya'); $('fldUpdater').focus(); return; }
-
   // Pengecekan akhir yang otoritatif: pastikan Nopol/Kode Armada tersambung
   // ke data yang sudah ada (kalau cocok) dan cegah duplikasi, terlepas dari
   // apakah pengecekan otomatis saat mengetik sempat jalan atau belum.
@@ -1215,8 +1288,19 @@ $('btnSavePanel').addEventListener('click', ()=>{
     return;
   }
 
+  const errors = validateForm();
+  if(errors.length > 0){
+    toast('Lengkapi dulu ' + errors.length + ' field wajib yang ditandai merah.');
+    const first = errors[0].el;
+    if(first){
+      first.scrollIntoView({ behavior:'smooth', block:'center' });
+      if(typeof first.focus === 'function') first.focus();
+    }
+    return;
+  }
+
+  const updater = $('fldUpdater').value.trim();
   const nopol = $('fldNopol').value.trim().toUpperCase();
-  if(!nopol){ toast('Nomor polisi wajib diisi'); $('fldNopol').focus(); return; }
 
   try{ localStorage.setItem('branding_updater_name', updater); }catch(e){}
 
