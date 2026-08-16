@@ -311,6 +311,31 @@
   .cam-shutter{width:70px; height:70px; background:#fff;}
   .cam-x, .cam-flash{color:#fff; border:none; background:none; font-size:22px; width:44px; height:44px;}
 
+  /* pilihan metode dokumentasi: kamera / galeri */
+  .choice-overlay{
+    position:fixed; inset:0; background:rgba(15,23,32,0.5); z-index:85;
+    display:none; align-items:flex-end; justify-content:center;
+  }
+  .choice-overlay.open{display:flex;}
+  .choice-sheet{
+    background:#fff; width:100%; max-width:420px; border-radius:16px 16px 0 0;
+    padding:18px 16px calc(18px + env(safe-area-inset-bottom, 0px));
+    display:flex; flex-direction:column; gap:8px; box-shadow:var(--shadow);
+  }
+  .choice-title{
+    font-size:12px; font-weight:700; color:var(--muted); text-align:center;
+    text-transform:uppercase; letter-spacing:.04em; margin-bottom:6px;
+  }
+  .choice-btn{
+    width:100%; padding:14px; border-radius:10px; border:1px solid var(--line-strong);
+    background:#fff; font-size:15px; font-weight:600; color:var(--ink); text-align:center;
+  }
+  .choice-btn:active{background:#F1F2ED;}
+  .choice-cancel{
+    width:100%; padding:14px; border-radius:10px; border:none; background:transparent;
+    font-size:15px; font-weight:600; color:var(--alert); text-align:center; margin-top:4px;
+  }
+
   .toast{
     position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
     background:var(--ink); color:#fff; padding:10px 18px; border-radius:8px; font-size:13.5px;
@@ -497,6 +522,16 @@
     <video id="camVideo" autoplay playsinline muted></video>
     <div class="cam-controls">
       <button class="cam-btn cam-shutter" id="camShutter"></button>
+    </div>
+  </div>
+
+  <!-- Pilihan metode dokumentasi: Buka Kamera atau Upload dari Galeri -->
+  <div class="choice-overlay" id="photoChoiceOverlay">
+    <div class="choice-sheet">
+      <div class="choice-title" id="photoChoiceTitle">Pilih metode dokumentasi</div>
+      <button type="button" class="choice-btn" id="choiceCamera">📷&nbsp; Buka Kamera</button>
+      <button type="button" class="choice-btn" id="choiceUpload">🖼️&nbsp; Upload dari Galeri</button>
+      <button type="button" class="choice-cancel" id="choiceCancel">Batal</button>
     </div>
   </div>
 
@@ -1065,12 +1100,39 @@ function renderPhotoGrids(){
   PHOTO_SLOTS.forEach(s=>{
     $('box_' + s.key).addEventListener('click', ()=>{
       if($('box_' + s.key).classList.contains('locked')) return;
-      startCamera(s.key);
+      openPhotoChoice(s.key);
     });
     $('file_' + s.key).addEventListener('change', e=> handleFileInput(e, s.key));
   });
 }
 renderPhotoGrids();
+
+/* ---------- pilihan metode dokumentasi: kamera vs galeri ---------- */
+let photoChoiceKey = null;
+function openPhotoChoice(key){
+  photoChoiceKey = key;
+  const slot = PHOTO_SLOTS.find(s=>s.key===key);
+  $('photoChoiceTitle').textContent = slot ? (slot.side==='before' ? 'Before' : 'After') + ' — ' + slot.partLabel : 'Pilih metode dokumentasi';
+  $('photoChoiceOverlay').classList.add('open');
+}
+function closePhotoChoice(){
+  $('photoChoiceOverlay').classList.remove('open');
+  photoChoiceKey = null;
+}
+$('choiceCamera').addEventListener('click', ()=>{
+  const key = photoChoiceKey;
+  closePhotoChoice();
+  if(key) startCamera(key);
+});
+$('choiceUpload').addEventListener('click', ()=>{
+  const key = photoChoiceKey;
+  closePhotoChoice();
+  if(key) $('file_' + key).click();
+});
+$('choiceCancel').addEventListener('click', closePhotoChoice);
+$('photoChoiceOverlay').addEventListener('click', (e)=>{
+  if(e.target.id === 'photoChoiceOverlay') closePhotoChoice();
+});
 
 function renderPhotoBox(key){
   const box = $('box_' + key);
