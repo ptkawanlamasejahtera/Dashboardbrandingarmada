@@ -448,6 +448,11 @@
             <input type="text" id="fldCabang" list="listCabang" placeholder="Site / Kota">
             <datalist id="listCabang"></datalist>
           </div>
+          <div style="flex:1;">
+            <label>Alokasi Site</label>
+            <input type="text" id="fldAlokasiSite" list="listAlokasiSite" placeholder="Site tujuan alokasi">
+            <datalist id="listAlokasiSite"></datalist>
+          </div>
         </div>
 
         <div class="field">
@@ -723,6 +728,8 @@ function populateFilterOptions(){
     STAGES.map(s=>`<option ${s===curS?'selected':''}>${s}</option>`).join('');
 
   $('listCabang').innerHTML = [...cabangSet].sort().map(c=>`<option value="${c}">`).join('');
+  const alokasiSet = new Set(DATA.map(r=>r['Alokasi Site']).filter(Boolean));
+  $('listAlokasiSite').innerHTML = [...alokasiSet].sort().map(c=>`<option value="${c}">`).join('');
   const jenisSet = new Set(DATA.map(r=>r['Jenis Armada']).filter(Boolean));
   $('listJenis').innerHTML = [...jenisSet].sort().map(c=>`<option value="${c}">`).join('');
 }
@@ -836,7 +843,7 @@ function renderList(rows){
   const host = $('listView');
   host.innerHTML = `<div class="table-wrap"><table>
     <thead><tr>
-      <th>Kode Armada</th><th>Nopol</th><th>Type</th><th>Site</th><th>Kondisi</th><th>Rebranding</th>
+      <th>Kode Armada</th><th>Nopol</th><th>Type</th><th>Site</th><th>Alokasi Site</th><th>Kondisi</th><th>Rebranding</th>
       <th>Status</th><th>PIC</th><th>Target</th><th>Update Terakhir</th>
     </tr></thead>
     <tbody id="listBody"></tbody>
@@ -849,6 +856,7 @@ function renderList(rows){
       <td class="mono">${escapeHtml(r.Nopol||'-')}</td>
       <td>${escapeHtml(r['Jenis Armada']||'-')}</td>
       <td>${escapeHtml(r.Cabang||'-')}</td>
+      <td>${escapeHtml(r['Alokasi Site']||'-')}</td>
       <td>${escapeHtml(r['Kondisi Reklame']||'-')}</td>
       <td>${r['Perlu Rebranding']==='Ya' ? '<span class="rebrand-flag">Ya</span>' : 'Tidak'}</td>
       <td><span class="status-pill" style="background:${sColor}22;color:${sColor}">${escapeHtml(r['Status Proses']||'-')}</span></td>
@@ -883,6 +891,7 @@ function fillFormFromRecord(record){
   $('fldNopol').value = record.Nopol||'';
   $('fldJenis').value = record['Jenis Armada']||'';
   $('fldCabang').value = record.Cabang||'';
+  $('fldAlokasiSite').value = record['Alokasi Site']||'';
   $('fldKondisi').value = record['Kondisi Reklame']||'Baik';
   $('fldPic').value = record['PIC Lapangan']||'';
   $('fldTarget').value = record['Target Selesai']||'';
@@ -926,6 +935,7 @@ function openPanel(id){
     $('fldNopol').value = '';
     $('fldJenis').value = '';
     $('fldCabang').value = '';
+    $('fldAlokasiSite').value = '';
     $('fldKondisi').value = 'Baik';
     $('fldPic').value = '';
     $('fldTarget').value = '';
@@ -1296,6 +1306,7 @@ const REQUIRED_TEXT_FIELDS = [
   { id:'fldNopol', label:'Nomor Polisi' },
   { id:'fldJenis', label:'Type Armada' },
   { id:'fldCabang', label:'Site' },
+  { id:'fldAlokasiSite', label:'Alokasi Site' },
   { id:'fldKondisi', label:'Kondisi Reklame' },
   { id:'fldPic', label:'PIC Lapangan' },
   { id:'fldUpdater', label:'Nama Anda' }
@@ -1395,6 +1406,7 @@ $('btnSavePanel').addEventListener('click', ()=>{
     nopol: nopol,
     jenis: $('fldJenis').value.trim(),
     cabang: $('fldCabang').value.trim(),
+    alokasi_site: $('fldAlokasiSite').value.trim(),
     kondisi: $('fldKondisi').value,
     perlu_rebranding: currentRebrand,
     status: currentStatus,
@@ -1417,6 +1429,7 @@ $('btnSavePanel').addEventListener('click', ()=>{
   rec.Nopol = payload.nopol;
   rec['Jenis Armada'] = payload.jenis;
   rec.Cabang = payload.cabang;
+  rec['Alokasi Site'] = payload.alokasi_site;
   rec['Kondisi Reklame'] = payload.kondisi;
   rec['Perlu Rebranding'] = payload.perlu_rebranding;
   rec['Status Proses'] = payload.status;
