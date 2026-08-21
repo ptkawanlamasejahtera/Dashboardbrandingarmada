@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   :root{
     --ink:#14181C;
@@ -513,6 +514,7 @@
       </div>
       <div class="panel-footer">
         <button class="btn btn-ghost" id="btnCancelPanel">Batal</button>
+        <button class="btn btn-ghost" id="btnPdfPanel" style="display:none;">📄 Unduh PDF</button>
         <button class="btn btn-primary" id="btnSavePanel">Simpan</button>
       </div>
     </div>
@@ -537,6 +539,81 @@
       <button type="button" class="choice-btn" id="choiceCamera">📷&nbsp; Buka Kamera</button>
       <button type="button" class="choice-btn" id="choiceUpload">🖼️&nbsp; Upload dari Galeri</button>
       <button type="button" class="choice-cancel" id="choiceCancel">Batal</button>
+    </div>
+  </div>
+
+  <!-- Dialog cetak PDF Kondisi Branding: No Rangka, Tahun, Branding, Ukuran -->
+  <div class="overlay" id="pdfOverlay">
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Cetak PDF Kondisi Branding</h2>
+        <button class="panel-close" id="btnClosePdf">&times;</button>
+      </div>
+      <div class="panel-body">
+        <div class="field-hint info" style="display:block;">Data di bawah ini hanya dipakai untuk PDF ini saja — tidak disimpan ke Data Tabel Armada.</div>
+
+        <div class="field">
+          <label>No Rangka</label>
+          <input type="text" id="pdfNoRangka" placeholder="mis. MHKP3CA1JKK201715" style="text-transform:uppercase;">
+        </div>
+        <div class="field" style="display:flex; gap:10px;">
+          <div style="flex:1;">
+            <label>Tahun</label>
+            <input type="text" id="pdfTahun" placeholder="mis. 2019">
+          </div>
+          <div style="flex:1;">
+            <label>Branding</label>
+            <input type="text" id="pdfBranding" placeholder="mis. Informa Furnishing">
+          </div>
+        </div>
+
+        <div class="field"><label style="margin-bottom:0;">Ukuran <span style="text-transform:none; font-weight:400;">(opsional — kosongkan jika belum ada, akan tampil "-" di PDF)</span></label></div>
+
+        <div class="field" style="display:flex; gap:10px;">
+          <div style="flex:1;">
+            <label>Bak Samping — Panjang (cm)</label>
+            <input type="number" id="ukBakSampingP" placeholder="mis. 238">
+          </div>
+          <div style="flex:1;">
+            <label>Bak Samping — Tinggi (cm)</label>
+            <input type="number" id="ukBakSampingT" placeholder="mis. 33">
+          </div>
+        </div>
+        <div class="field" style="display:flex; gap:10px;">
+          <div style="flex:1;">
+            <label>Bak Belakang — Tinggi (cm)</label>
+            <input type="number" id="ukBakBelakangT" placeholder="mis. 27">
+          </div>
+          <div style="flex:1;">
+            <label>Bak Belakang — Lebar (cm)</label>
+            <input type="number" id="ukBakBelakangL" placeholder="mis. 157">
+          </div>
+        </div>
+        <div class="field" style="display:flex; gap:10px;">
+          <div style="flex:1;">
+            <label>Kabin Depan — Tinggi (cm)</label>
+            <input type="number" id="ukKabinT" placeholder="mis. 48">
+          </div>
+          <div style="flex:1;">
+            <label>Kabin Depan — Lebar (cm)</label>
+            <input type="number" id="ukKabinL" placeholder="mis. 144">
+          </div>
+        </div>
+        <div class="field" style="display:flex; gap:10px;">
+          <div style="flex:1;">
+            <label>Pintu Kabin — Tinggi (cm)</label>
+            <input type="number" id="ukPintuT" placeholder="mis. 89">
+          </div>
+          <div style="flex:1;">
+            <label>Pintu Kabin — Lebar (cm)</label>
+            <input type="number" id="ukPintuL" placeholder="mis. 102">
+          </div>
+        </div>
+      </div>
+      <div class="panel-footer">
+        <button class="btn btn-ghost" id="btnCancelPdfDialog">Batal</button>
+        <button class="btn btn-primary" id="btnGeneratePdf">Buat &amp; Unduh PDF</button>
+      </div>
     </div>
   </div>
 
@@ -808,6 +885,20 @@ function renderBoard(rows){
   cols.querySelectorAll('[data-open-id]').forEach(el=>{
     el.addEventListener('click', ()=> openPanel(el.getAttribute('data-open-id')));
   });
+  cols.querySelectorAll('[data-pdf-id]').forEach(el=>{
+    el.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      const rec = DATA.find(r=>r.ID === el.getAttribute('data-pdf-id'));
+      if(rec) openPdfDialog(rec);
+    });
+  });
+}
+
+// PDF Kondisi Branding hanya boleh dibuat kalau armada perlu rebranding
+// DAN dokumentasi Before-nya sudah lengkap 4 sisi.
+function canGeneratePdf(r){
+  if(r['Perlu Rebranding'] !== 'Ya') return false;
+  return PHOTO_SLOTS.filter(s=>s.side==='before').every(s=> !!r[s.column]);
 }
 
 function cardHtml(r){
@@ -817,7 +908,8 @@ function cardHtml(r){
   const photosHtml = [beforeThumb && r[beforeThumb.column], afterThumb && r[afterThumb.column]].filter(Boolean)
     .map(u=>`<img src="${driveThumb(u)}" loading="lazy">`).join('');
   const docCount = docCompleteCount(r);
-  return `<button class="plate-card" data-open-id="${r.ID}" style="text-align:left;">
+  const pdfEligible = canGeneratePdf(r);
+  return `<div class="plate-card" data-open-id="${r.ID}" style="text-align:left; cursor:pointer;">
     <div class="plate-top">
       <span style="display:flex; align-items:center; gap:6px; overflow:hidden;">
         ${r['Kode Armada'] ? `<span class="tag mono" style="flex-shrink:0;">${escapeHtml(r['Kode Armada'])}</span>` : ''}
@@ -836,7 +928,8 @@ function cardHtml(r){
       <span>${r['Perlu Rebranding']==='Ya' ? '<span class="rebrand-flag">Perlu Rebranding</span>' : 'PIC: '+escapeHtml(r['PIC Lapangan']||'-')}</span>
       <span>${fmtRelative(r['Tanggal Update'])}</span>
     </div>
-  </button>`;
+    ${pdfEligible ? `<button type="button" class="btn btn-ghost btn-sm" data-pdf-id="${r.ID}" style="width:100%; justify-content:center; margin-top:8px;">📄 Unduh PDF</button>` : ''}
+  </div>`;
 }
 
 function renderList(rows){
@@ -844,7 +937,7 @@ function renderList(rows){
   host.innerHTML = `<div class="table-wrap"><table>
     <thead><tr>
       <th>Kode Armada</th><th>Nopol</th><th>Type</th><th>Site</th><th>Alokasi Site</th><th>Kondisi</th><th>Rebranding</th>
-      <th>Status</th><th>PIC</th><th>Target</th><th>Update Terakhir</th>
+      <th>Status</th><th>PIC</th><th>Target</th><th>Update Terakhir</th><th>Aksi</th>
     </tr></thead>
     <tbody id="listBody"></tbody>
   </table></div>`;
@@ -863,10 +956,18 @@ function renderList(rows){
       <td>${escapeHtml(r['PIC Lapangan']||'-')}</td>
       <td>${escapeHtml(r['Target Selesai']||'-')}</td>
       <td>${fmtRelative(r['Tanggal Update'])}</td>
+      <td>${canGeneratePdf(r) ? `<button type="button" class="btn btn-ghost btn-sm" data-pdf-id="${r.ID}">📄 PDF</button>` : ''}</td>
     </tr>`;
   }).join('');
   body.querySelectorAll('tr').forEach(el=>{
     el.addEventListener('click', ()=> openPanel(el.getAttribute('data-open-id')));
+  });
+  body.querySelectorAll('[data-pdf-id]').forEach(el=>{
+    el.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      const rec = DATA.find(r=>r.ID === el.getAttribute('data-pdf-id'));
+      if(rec) openPdfDialog(rec);
+    });
   });
 }
 
@@ -879,6 +980,157 @@ function driveThumb(url){
 function escapeHtml(s){
   return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
+
+/* =========================================================
+   CETAK PDF "KONDISI BRANDING" — foto Before + No Rangka/Tahun/
+   Branding/Ukuran (diisi manual per-cetak, tidak disimpan ke Sheet)
+   ========================================================= */
+let pdfTargetRecord = null;
+function openPdfDialog(record){
+  pdfTargetRecord = record;
+  ['pdfNoRangka','pdfTahun','pdfBranding','ukBakSampingP','ukBakSampingT',
+   'ukBakBelakangT','ukBakBelakangL','ukKabinT','ukKabinL','ukPintuT','ukPintuL']
+    .forEach(id=>{ $(id).value = ''; });
+  $('pdfOverlay').classList.add('open');
+}
+function closePdfDialog(){
+  $('pdfOverlay').classList.remove('open');
+  pdfTargetRecord = null;
+}
+$('btnClosePdf').addEventListener('click', closePdfDialog);
+$('btnCancelPdfDialog').addEventListener('click', closePdfDialog);
+
+// Ambil isi foto Drive sebagai data URL lewat Apps Script (JSONP) — supaya tidak
+// kena batasan CORS Google Drive kalau diambil langsung dari browser.
+function fetchDrivePhotoAsDataUrl(driveUrl){
+  return new Promise((resolve, reject)=>{
+    const m = driveUrl && driveUrl.match(/\/d\/([^/]+)/);
+    if(!m){ reject(new Error('URL foto tidak valid')); return; }
+    const fileId = m[1];
+    const cbName = 'armadaPhotoCb_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
+    let settled = false;
+    function cleanup(script){ if(script && script.parentNode) script.parentNode.removeChild(script); delete window[cbName]; }
+    window[cbName] = function(data){
+      settled = true;
+      cleanup(script);
+      if(data && data.dataUrl) resolve(data.dataUrl);
+      else reject(new Error((data && data.error) || 'Gagal mengambil foto dari Drive'));
+    };
+    const script = document.createElement('script');
+    script.src = SCRIPT_URL + '?action=getPhoto&fileId=' + encodeURIComponent(fileId) + '&callback=' + cbName;
+    script.onerror = ()=>{ if(!settled){ reject(new Error('Gagal memuat foto (koneksi)')); cleanup(script); } };
+    document.head.appendChild(script);
+    setTimeout(()=>{ if(!settled){ reject(new Error('Waktu ambil foto habis, coba lagi')); cleanup(script); } }, 20000);
+  });
+}
+
+async function generateBrandingPdf(record, meta){
+  if(!window.jspdf || !window.jspdf.jsPDF){ throw new Error('Library PDF belum termuat — coba refresh halaman lalu ulangi.'); }
+  const { jsPDF } = window.jspdf;
+
+  const parts = ['depan','belakang','kiri','kanan'];
+  const partColumn = {
+    depan: PHOTO_SLOTS.find(s=>s.key==='before_depan').column,
+    belakang: PHOTO_SLOTS.find(s=>s.key==='before_belakang').column,
+    kiri: PHOTO_SLOTS.find(s=>s.key==='before_kiri').column,
+    kanan: PHOTO_SLOTS.find(s=>s.key==='before_kanan').column
+  };
+  const urls = {};
+  for(const part of parts){
+    urls[part] = await fetchDrivePhotoAsDataUrl(record[partColumn[part]]);
+  }
+
+  const doc = new jsPDF({ unit:'mm', format:'a4' });
+  const pageW = doc.internal.pageSize.getWidth();
+  const marginX = 15;
+  let y = 15;
+
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(13);
+  const title = ('KONDISI BRANDING ' + (record.Nopol||'') + ' ' + (record['Jenis Armada']||'')).toUpperCase();
+  doc.text(title, pageW/2, y, { align:'center' });
+  y += 8;
+
+  const gap = 6;
+  const imgW = (pageW - marginX*2 - gap) / 2;
+  const imgH = imgW * 0.62;
+  const positions = [
+    { part:'depan',    x:marginX,            y:y },
+    { part:'belakang', x:marginX+imgW+gap,   y:y },
+    { part:'kiri',     x:marginX,            y:y+imgH+gap },
+    { part:'kanan',    x:marginX+imgW+gap,   y:y+imgH+gap }
+  ];
+  positions.forEach(p=>{
+    const dataUrl = urls[p.part];
+    const fmt = dataUrl.indexOf('image/png') > -1 ? 'PNG' : 'JPEG';
+    try{ doc.addImage(dataUrl, fmt, p.x, p.y, imgW, imgH); }catch(e){ /* lewati kalau satu foto gagal di-embed */ }
+  });
+  y = y + imgH*2 + gap + 12;
+
+  doc.setFontSize(11);
+  const infoLines = [
+    ['No Rangka', meta.noRangka],
+    ['Nopol', record.Nopol],
+    ['Type', record['Jenis Armada']],
+    ['Tahun', meta.tahun],
+    ['Branding', meta.branding]
+  ];
+  infoLines.forEach(([label,val])=>{
+    doc.setFont('helvetica','bold');
+    doc.text(label + ' :', marginX, y);
+    doc.setFont('helvetica','normal');
+    doc.text(String(val || '-'), marginX + 34, y);
+    y += 6.5;
+  });
+
+  y += 3;
+  doc.setFont('helvetica','bold');
+  doc.text('Ukuran :', marginX, y);
+  y += 6.5;
+  doc.setFont('helvetica','normal');
+  const ukuran = [
+    'Bak samping kanan dan Kiri : (P) ' + (meta.bakSampingP || '-') + ' cm X (T) ' + (meta.bakSampingT || '-') + ' cm',
+    'Bak belakang : (T) ' + (meta.bakBelakangT || '-') + ' cm X (L) ' + (meta.bakBelakangL || '-') + ' cm',
+    'Kabin Depan : (T) ' + (meta.kabinT || '-') + ' cm X (L) ' + (meta.kabinL || '-') + ' cm',
+    'Pintu Kabin kanan dan Kiri : (T) ' + (meta.pintuT || '-') + ' cm X (L) ' + (meta.pintuL || '-') + ' cm'
+  ];
+  ukuran.forEach(line=>{
+    doc.text('•  ' + line, marginX + 4, y);
+    y += 6.5;
+  });
+
+  const safeNopol = (record.Nopol || 'armada').replace(/\s+/g,'');
+  doc.save('Kondisi_Branding_' + safeNopol + '.pdf');
+}
+
+$('btnGeneratePdf').addEventListener('click', async ()=>{
+  if(!pdfTargetRecord) return;
+  const btn = $('btnGeneratePdf');
+  const original = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Menyiapkan PDF…';
+  try{
+    await generateBrandingPdf(pdfTargetRecord, {
+      noRangka: $('pdfNoRangka').value.trim(),
+      tahun: $('pdfTahun').value.trim(),
+      branding: $('pdfBranding').value.trim(),
+      bakSampingP: $('ukBakSampingP').value.trim(),
+      bakSampingT: $('ukBakSampingT').value.trim(),
+      bakBelakangT: $('ukBakBelakangT').value.trim(),
+      bakBelakangL: $('ukBakBelakangL').value.trim(),
+      kabinT: $('ukKabinT').value.trim(),
+      kabinL: $('ukKabinL').value.trim(),
+      pintuT: $('ukPintuT').value.trim(),
+      pintuL: $('ukPintuL').value.trim()
+    });
+    closePdfDialog();
+  }catch(err){
+    toast('Gagal membuat PDF: ' + err.message);
+  }finally{
+    btn.disabled = false;
+    btn.textContent = original;
+  }
+});
 
 /* =========================================================
    PANEL (add / edit)
@@ -926,6 +1178,8 @@ function openPanel(id){
   const record = id ? DATA.find(r=>r.ID===id) : null;
 
   $('panelTitle').textContent = record ? 'Detail Armada' : 'Tambah Armada';
+  $('btnPdfPanel').style.display = (record && canGeneratePdf(record)) ? '' : 'none';
+  $('btnPdfPanel').onclick = ()=>{ if(record) openPdfDialog(record); };
 
   if(record){
     fillFormFromRecord(record);
