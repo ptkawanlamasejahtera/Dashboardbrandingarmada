@@ -142,6 +142,25 @@
   .route-node:first-child .route-line{display:none;}
   .route-node.done .dot{background:var(--green); border-color:var(--green); color:#fff;}
 
+  /* ---------- Branding reminder ---------- */
+  .reminder-card{
+    background:#FDF3F1; border:1px solid var(--alert); border-radius:var(--radius);
+    padding:16px 18px 14px; margin-bottom:16px; box-shadow:var(--shadow);
+  }
+  .reminder-card h3{font-size:12.5px; color:var(--alert); margin:0 0 12px; letter-spacing:0.03em; text-transform:uppercase;}
+  .reminder-grid{display:flex; flex-wrap:wrap; gap:10px;}
+  .reminder-chip{
+    background:#fff; border:1px solid var(--alert); border-radius:10px; padding:10px 14px;
+    min-width:120px; display:flex; flex-direction:column; gap:2px;
+  }
+  .reminder-chip .site{font-size:11.5px; font-weight:700; color:var(--ink); text-transform:uppercase; letter-spacing:.02em;}
+  .reminder-chip .count{font-family:'Oswald',sans-serif; font-size:24px; font-weight:600; color:var(--alert); line-height:1.1;}
+  .reminder-chip .count small{font-family:'Inter',sans-serif; font-size:11px; font-weight:500; color:var(--muted);}
+  .reminder-total{
+    font-size:12.5px; color:var(--ink); margin-bottom:10px; padding-bottom:10px; border-bottom:1px dashed var(--alert);
+  }
+  .reminder-total b{font-family:'Oswald',sans-serif; font-size:16px; color:var(--alert);}
+
   /* ---------- Board ---------- */
   .board{display:flex; gap:12px; overflow-x:auto; padding-bottom:6px;}
   .col{
@@ -387,6 +406,11 @@
       <div class="route-track" id="routeTrack"></div>
     </div>
 
+    <div class="reminder-card" id="reminderCard" style="display:none;">
+      <h3>⏰ PENGINGAT WAJIB AJUKAN REBRANDING <span style="text-transform:none; font-weight:500; font-size:12px;">(Usia Branding ≥ 18 bulan sejak selesai)</span></h3>
+      <div id="reminderBody"></div>
+    </div>
+
     <div class="toolbar">
       <input type="text" id="fSearch" placeholder="Cari nopol / type / PIC...">
       <select id="fCabang"><option value="">Semua Site</option></select>
@@ -558,7 +582,7 @@
         </div>
         <div class="field" style="display:flex; gap:10px;">
           <div style="flex:1;">
-            <label>Tahun</label>
+            <label>Tahun Armada</label>
             <input type="text" id="pdfTahun" placeholder="mis. 2019">
           </div>
           <div style="flex:1;">
@@ -567,48 +591,13 @@
           </div>
         </div>
 
-        <div class="field"><label style="margin-bottom:0;">Ukuran <span style="text-transform:none; font-weight:400;">(opsional — kosongkan jika belum ada, akan tampil "-" di PDF)</span></label></div>
+        <div class="field-hint" id="usiaBrandingBox" style="display:block;"></div>
 
-        <div class="field" style="display:flex; gap:10px;">
-          <div style="flex:1;">
-            <label>Bak Samping — Panjang (cm)</label>
-            <input type="number" id="ukBakSampingP" placeholder="mis. 238">
-          </div>
-          <div style="flex:1;">
-            <label>Bak Samping — Tinggi (cm)</label>
-            <input type="number" id="ukBakSampingT" placeholder="mis. 33">
-          </div>
+        <div class="field">
+          <label style="margin-bottom:0;">Ukuran <span style="text-transform:none; font-weight:400;">(opsional — kosongkan jika belum ada, akan tampil "-" di PDF)</span></label>
+          <div style="font-size:11.5px; color:var(--muted); margin-top:2px;" id="ukuranTemplateLabel"></div>
         </div>
-        <div class="field" style="display:flex; gap:10px;">
-          <div style="flex:1;">
-            <label>Bak Belakang — Tinggi (cm)</label>
-            <input type="number" id="ukBakBelakangT" placeholder="mis. 27">
-          </div>
-          <div style="flex:1;">
-            <label>Bak Belakang — Lebar (cm)</label>
-            <input type="number" id="ukBakBelakangL" placeholder="mis. 157">
-          </div>
-        </div>
-        <div class="field" style="display:flex; gap:10px;">
-          <div style="flex:1;">
-            <label>Kabin Depan — Tinggi (cm)</label>
-            <input type="number" id="ukKabinT" placeholder="mis. 48">
-          </div>
-          <div style="flex:1;">
-            <label>Kabin Depan — Lebar (cm)</label>
-            <input type="number" id="ukKabinL" placeholder="mis. 144">
-          </div>
-        </div>
-        <div class="field" style="display:flex; gap:10px;">
-          <div style="flex:1;">
-            <label>Pintu Kabin — Tinggi (cm)</label>
-            <input type="number" id="ukPintuT" placeholder="mis. 89">
-          </div>
-          <div style="flex:1;">
-            <label>Pintu Kabin — Lebar (cm)</label>
-            <input type="number" id="ukPintuL" placeholder="mis. 102">
-          </div>
-        </div>
+        <div id="ukuranFields"></div>
       </div>
       <div class="panel-footer">
         <button class="btn btn-ghost" id="btnCancelPdfDialog">Batal</button>
@@ -825,6 +814,7 @@ function render(){
   $('statSelesai').textContent = DATA.filter(r=>r['Status Proses']==='COMPLETED').length;
 
   renderRouteSummary();
+  renderBrandingReminder();
 
   $('bannerHost').innerHTML = '';
   renderRetryBanner();
@@ -869,6 +859,37 @@ function renderRouteSummary(){
       <div class="lbl">${s}</div>
     </div>`;
   }).join('');
+}
+
+// Pengingat: armada yang Usia Branding-nya sudah 18 bulan atau lebih sejak
+// "Tanggal Selesai Branding" terakhir wajib diajukan rebranding lagi.
+// Dikelompokkan per Site supaya jadi acuan pengajuan ke tiap cabang.
+function renderBrandingReminder(){
+  const card = $('reminderCard');
+  const bySite = {};
+  let total = 0;
+  DATA.forEach(r=>{
+    const info = computeUsiaBranding(r);
+    if(info && info.wajibRebranding){
+      const site = r.Cabang || 'Tanpa Site';
+      bySite[site] = (bySite[site]||0) + 1;
+      total++;
+    }
+  });
+
+  if(total === 0){ card.style.display = 'none'; return; }
+  card.style.display = 'block';
+
+  const chips = Object.keys(bySite).sort((a,b)=> bySite[b]-bySite[a]).map(site=>
+    `<div class="reminder-chip">
+      <span class="site">${escapeHtml(site)}</span>
+      <span class="count">${bySite[site]} <small>armada</small></span>
+    </div>`
+  ).join('');
+
+  $('reminderBody').innerHTML =
+    `<div class="reminder-total"><b>${total}</b> armada di seluruh site sudah usia branding ≥ 18 bulan — segera ajukan rebranding.</div>
+     <div class="reminder-grid">${chips}</div>`;
 }
 
 function renderBoard(rows){
@@ -985,12 +1006,104 @@ function escapeHtml(s){
    CETAK PDF "KONDISI BRANDING" — foto Before + No Rangka/Tahun/
    Branding/Ukuran (diisi manual per-cetak, tidak disimpan ke Sheet)
    ========================================================= */
+
+// Ukuran branding beda struktur tergantung Type Armada:
+// - Box/Container (CDE, CDD, Wingbox, Trailer, FUSO, Container, Mini Van Box)
+// - Pickup / CDE Pickup / CDD Pickup / Losbak
+const UKURAN_TEMPLATES = {
+  box: {
+    label: 'Box (CDE, CDD, Wingbox, Trailer, FUSO, Container, Mini Van Box)',
+    groups: [
+      { title:'Box Depan',              dims:[{key:'boxDepanT', letter:'T'},   {key:'boxDepanL', letter:'L'}] },
+      { title:'Topi Armada',            dims:[{key:'topiT', letter:'T'},       {key:'topiL', letter:'L'}] },
+      { title:'Box Samping Kanan + Kiri', dims:[{key:'boxSampingP', letter:'P'}, {key:'boxSampingL', letter:'L'}] },
+      { title:'Pintu Box',              dims:[{key:'pintuBoxT', letter:'T'},   {key:'pintuBoxL', letter:'L'}] }
+    ]
+  },
+  pickup: {
+    label: 'Pickup / CDE Pickup / CDD Pickup / Losbak',
+    groups: [
+      { title:'Kabin Depan',                       dims:[{key:'kabinT', letter:'T'},       {key:'kabinL', letter:'L'}] },
+      { title:'Pintu Kabin Samping Kanan + Kiri',  dims:[{key:'pintuKabinT', letter:'T'}, {key:'pintuKabinP', letter:'P'}] },
+      { title:'Bak Samping Kanan + Kiri',          dims:[{key:'bakSampingP', letter:'P'}, {key:'bakSampingT', letter:'T'}] },
+      { title:'Bak Belakang',                      dims:[{key:'bakBelakangT', letter:'T'},{key:'bakBelakangL', letter:'L'}] }
+    ]
+  }
+};
+function getUkuranTemplate(jenisArmada){
+  const t = (jenisArmada||'').toLowerCase();
+  if(t.indexOf('pickup') > -1 || t.indexOf('losbak') > -1 || t.indexOf('los bak') > -1) return 'pickup';
+  return 'box';
+}
+function renderUkuranFields(record){
+  const tplKey = getUkuranTemplate(record['Jenis Armada']);
+  const tpl = UKURAN_TEMPLATES[tplKey];
+  $('ukuranTemplateLabel').textContent = 'Format: ' + tpl.label;
+  $('ukuranFields').innerHTML = tpl.groups.map(g=>`
+    <div class="field" style="display:flex; gap:10px;">
+      ${g.dims.map(d=>`
+        <div style="flex:1;">
+          <label>${g.title} — ${d.letter} (cm)</label>
+          <input type="number" id="uk_${d.key}" placeholder="cm">
+        </div>`).join('')}
+    </div>`).join('');
+}
+function buildUkuranLines(record){
+  const tpl = UKURAN_TEMPLATES[getUkuranTemplate(record['Jenis Armada'])];
+  return tpl.groups.map(g=>{
+    const parts = g.dims.map(d=>{
+      const val = $('uk_' + d.key) ? $('uk_' + d.key).value.trim() : '';
+      return '(' + d.letter + ') ' + (val || '-') + ' cm';
+    });
+    return g.title + ' : ' + parts.join(' X ');
+  });
+}
+
+// Usia Branding = sekarang - Tanggal Selesai Branding terakhir.
+// Kalau usianya sudah >= 18 bulan sejak selesai, armada WAJIB rebranding lagi.
+function fmtDateID(d){
+  if(!d || isNaN(d.getTime())) return '-';
+  return String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear();
+}
+function computeUsiaBranding(record){
+  const raw = record['Tanggal Selesai Branding'];
+  if(!raw) return null;
+  const completedDate = new Date(raw);
+  if(isNaN(completedDate.getTime())) return null;
+  const now = new Date();
+  let months = (now.getFullYear()-completedDate.getFullYear())*12 + (now.getMonth()-completedDate.getMonth());
+  if(now.getDate() < completedDate.getDate()) months -= 1;
+  months = Math.max(months, 0);
+  const dueDate = new Date(completedDate);
+  dueDate.setMonth(dueDate.getMonth() + 18);
+  return { completedDate, months, dueDate, wajibRebranding: now >= dueDate };
+}
+function renderUsiaBrandingBox(record){
+  const box = $('usiaBrandingBox');
+  const info = computeUsiaBranding(record);
+  if(!info){
+    box.className = 'field-hint info';
+    box.textContent = 'Usia Branding: belum ada riwayat "Tanggal Selesai Branding" untuk armada ini.';
+    return;
+  }
+  box.className = 'field-hint ' + (info.wajibRebranding ? 'warn' : 'info');
+  box.textContent = 'Usia Branding: ' + info.months + ' bulan (selesai ' + fmtDateID(info.completedDate) + ') — ' +
+    'batas wajib rebranding: ' + fmtDateID(info.dueDate) +
+    (info.wajibRebranding ? ' — SUDAH WAJIB REBRANDING' : ' — belum wajib');
+}
+function usiaBrandingPdfText(record){
+  const info = computeUsiaBranding(record);
+  if(!info) return 'Belum ada riwayat branding selesai sebelumnya';
+  return info.months + ' bulan (selesai ' + fmtDateID(info.completedDate) + ') — ' +
+    (info.wajibRebranding ? 'WAJIB REBRANDING (lewat 18 bulan)' : 'belum wajib, batas ' + fmtDateID(info.dueDate));
+}
+
 let pdfTargetRecord = null;
 function openPdfDialog(record){
   pdfTargetRecord = record;
-  ['pdfNoRangka','pdfTahun','pdfBranding','ukBakSampingP','ukBakSampingT',
-   'ukBakBelakangT','ukBakBelakangL','ukKabinT','ukKabinL','ukPintuT','ukPintuL']
-    .forEach(id=>{ $(id).value = ''; });
+  ['pdfNoRangka','pdfTahun','pdfBranding'].forEach(id=>{ $(id).value = ''; });
+  renderUkuranFields(record);
+  renderUsiaBrandingBox(record);
   $('pdfOverlay').classList.add('open');
 }
 function closePdfDialog(){
@@ -1072,8 +1185,9 @@ async function generateBrandingPdf(record, meta){
     ['No Rangka', meta.noRangka],
     ['Nopol', record.Nopol],
     ['Type', record['Jenis Armada']],
-    ['Tahun', meta.tahun],
-    ['Branding', meta.branding]
+    ['Tahun Armada', meta.tahun],
+    ['Branding', meta.branding],
+    ['Usia Branding', usiaBrandingPdfText(record)]
   ];
   infoLines.forEach(([label,val])=>{
     doc.setFont('helvetica','bold');
@@ -1088,13 +1202,7 @@ async function generateBrandingPdf(record, meta){
   doc.text('Ukuran :', marginX, y);
   y += 6.5;
   doc.setFont('helvetica','normal');
-  const ukuran = [
-    'Bak samping kanan dan Kiri : (P) ' + (meta.bakSampingP || '-') + ' cm X (T) ' + (meta.bakSampingT || '-') + ' cm',
-    'Bak belakang : (T) ' + (meta.bakBelakangT || '-') + ' cm X (L) ' + (meta.bakBelakangL || '-') + ' cm',
-    'Kabin Depan : (T) ' + (meta.kabinT || '-') + ' cm X (L) ' + (meta.kabinL || '-') + ' cm',
-    'Pintu Kabin kanan dan Kiri : (T) ' + (meta.pintuT || '-') + ' cm X (L) ' + (meta.pintuL || '-') + ' cm'
-  ];
-  ukuran.forEach(line=>{
+  buildUkuranLines(record).forEach(line=>{
     doc.text('•  ' + line, marginX + 4, y);
     y += 6.5;
   });
@@ -1113,15 +1221,7 @@ $('btnGeneratePdf').addEventListener('click', async ()=>{
     await generateBrandingPdf(pdfTargetRecord, {
       noRangka: $('pdfNoRangka').value.trim(),
       tahun: $('pdfTahun').value.trim(),
-      branding: $('pdfBranding').value.trim(),
-      bakSampingP: $('ukBakSampingP').value.trim(),
-      bakSampingT: $('ukBakSampingT').value.trim(),
-      bakBelakangT: $('ukBakBelakangT').value.trim(),
-      bakBelakangL: $('ukBakBelakangL').value.trim(),
-      kabinT: $('ukKabinT').value.trim(),
-      kabinL: $('ukKabinL').value.trim(),
-      pintuT: $('ukPintuT').value.trim(),
-      pintuL: $('ukPintuL').value.trim()
+      branding: $('pdfBranding').value.trim()
     });
     closePdfDialog();
   }catch(err){
